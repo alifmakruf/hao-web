@@ -1,15 +1,12 @@
 import { create } from 'zustand'
 
-// Global state pakai Zustand — lebih simpel dari Redux
-// Semua komponen bisa akses tanpa prop drilling
 export const useHAOStore = create((set) => ({
 
   // ── Mode sistem ──────────────────────────────────────────
-  // 'manual' | 'auto' | 'adaptive'
-  mode: 'adaptive',
+  mode: 'manual',   // default manual agar langsung bisa klik device
   setMode: (mode) => set({ mode }),
 
-  // ── Status device (dari Firebase realtime) ───────────────
+  // ── Status device ─────────────────────────────────────────
   devices: {
     lampu_ruangtamu:  'OFF',
     lampu_kamar1:     'OFF',
@@ -20,16 +17,19 @@ export const useHAOStore = create((set) => ({
   },
   setDevices: (devices) => set({ devices }),
 
-  // ── Data sensor (dari Firebase realtime) ─────────────────
-  sensor: {
-    suhu:  0,
-    ldr:   0,
-    gas:   0,
-  },
+  // Toggle lokal tanpa Firebase (untuk demo & testing UI)
+  toggleDeviceLocal: (key) => set((s) => ({
+    devices: {
+      ...s.devices,
+      [key]: s.devices[key] === 'ON' ? 'OFF' : 'ON',
+    }
+  })),
+
+  // ── Data sensor — nilai default realistis untuk demo ──────
+  sensor: { suhu: 27, ldr: 400, gas: 120 },
   setSensor: (sensor) => set({ sensor }),
 
-  // ── Notifikasi aktif (ala The Sims) ──────────────────────
-  // Array of { id, type, room, message }
+  // ── Notifikasi ala The Sims ────────────────────────────────
   notifs: [],
   addNotif: (notif) =>
     set((s) => ({
@@ -38,7 +38,11 @@ export const useHAOStore = create((set) => ({
   removeNotif: (id) =>
     set((s) => ({ notifs: s.notifs.filter(n => n.id !== id) })),
 
-  // ── Alasan terakhir dari decision engine n8n ─────────────
-  alasan: '',
+  // ── Info dari n8n ─────────────────────────────────────────
+  alasan: 'DEMO_MODE',
   setAlasan: (alasan) => set({ alasan }),
+
+  // ── Flag Firebase ─────────────────────────────────────────
+  firebaseConnected: false,
+  setFirebaseConnected: (v) => set({ firebaseConnected: v }),
 }))
