@@ -2,12 +2,17 @@ import { useHAOStore } from '../../store'
 import { useDeviceStatus } from '../../hooks/useDeviceStatus'
 
 const DEVICES = [
-  { key: 'lampu_ruangtamu', label: 'Lampu Ruang Tamu', icon: '💡' },
-  { key: 'lampu_kamar1',    label: 'Lampu Kamar 1',    icon: '💡' },
-  { key: 'lampu_kamar2',    label: 'Lampu Kamar 2',    icon: '💡' },
-  { key: 'lampu_dapur',     label: 'Lampu Dapur',      icon: '💡' },
-  { key: 'fan_ruangtamu',   label: 'Kipas Ruang Tamu', icon: '🌀' },
-  { key: 'fan_kamar1',      label: 'Kipas Kamar 1',    icon: '🌀' },
+  { key: 'lampu_ruangtamu',        label: 'Lampu Ruang Tamu',    icon: '💡' },
+  { key: 'lampu_dapurdankeluarga', label: 'Lampu Dapur',         icon: '💡' },
+  { key: 'lampu_kamar1',           label: 'Lampu Kamar 1',       icon: '💡' },
+  { key: 'lampu_kamar2',           label: 'Lampu Kamar 2',       icon: '💡' },
+  { key: 'lampu_kamar3',           label: 'Lampu Kamar 3',       icon: '💡' },
+  { key: 'lampu_teras',            label: 'Lampu Teras',         icon: '💡' },
+  { key: 'lampu_gerbang',          label: 'Lampu Gerbang',       icon: '💡' },
+  { key: 'lampu_garasi',           label: 'Lampu Garasi',        icon: '💡' },
+  { key: 'fan_ruangtamu',          label: 'Kipas Ruang Tamu',    icon: '🌀' },
+  { key: 'fan_kamar',              label: 'Kipas Kamar',         icon: '🌀' },
+  { key: 'fan_dapur',              label: 'Kipas Dapur',         icon: '🌀' },
 ]
 
 export function DeviceCard() {

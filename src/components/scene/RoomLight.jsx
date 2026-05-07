@@ -7,8 +7,8 @@ export function RoomLight({
   position = [0, 2.5, 0],
   isOn      = false,
   color     = '#ffe8a0',   // warm white default
-  distance  = 8,           // jangkauan cahaya (meter scene)
-  intensity = 3.5,         // intensitas saat ON
+  distance  = 6,           // jangkauan cahaya (meter scene)
+  intensity = 0.5,         // intensitas saat ON
 }) {
   const lightRef  = useRef()
   const meshRef   = useRef()

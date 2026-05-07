@@ -8,12 +8,17 @@ export const useHAOStore = create((set) => ({
 
   // ── Status device ─────────────────────────────────────────
   devices: {
-    lampu_ruangtamu:  'OFF',
-    lampu_kamar1:     'OFF',
-    lampu_kamar2:     'OFF',
-    lampu_dapur:      'OFF',
-    fan_ruangtamu:    'OFF',
-    fan_kamar1:       'OFF',
+  lampu_ruangtamu:        'OFF',
+  lampu_dapurdankeluarga: 'OFF',
+  lampu_kamar1:           'OFF',
+  lampu_kamar2:           'OFF',
+  lampu_kamar3:           'OFF',
+  lampu_teras:            'OFF',
+  lampu_gerbang:          'OFF',
+  lampu_garasi:           'OFF',
+  fan_ruangtamu:          'OFF',
+  fan_kamar:              'OFF',
+  fan_dapur:              'OFF',
   },
   setDevices: (devices) => set({ devices }),
 

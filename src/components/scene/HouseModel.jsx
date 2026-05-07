@@ -9,21 +9,30 @@ import { useDeviceStatus } from '../../hooks/useDeviceStatus'
 // Peta nama mesh Blender → device key di Firebase
 // Setelah kamu rename mesh di Blender, sesuaikan di sini
 const DEVICE_MESH_MAP = {
-  'Lampu_RuangTamu': 'lampu_ruangtamu',
-  'Lampu_Kamar1':    'lampu_kamar1',
-  'Lampu_Kamar2':    'lampu_kamar2',
-  'Lampu_Dapur':     'lampu_dapur',
-  'Fan_RuangTamu':   'fan_ruangtamu',
-  'Fan_Kamar1':      'fan_kamar1',
+  'Lampu_RuangTamu':        'lampu_ruangtamu',
+  'Lampu_DapurDanKeluarga': 'lampu_dapurdankeluarga',
+  'Lampu_Kamar1':           'lampu_kamar1',
+  'Lampu_Kamar2':           'lampu_kamar2',
+  'Lampu_Kamar3':           'lampu_kamar3',
+  'Lampu_Teras':            'lampu_teras',
+  'Lampu_Gerbang':          'lampu_gerbang',
+  'Lampu_Garasi':           'lampu_garasi',
+  'Fan_RuangTamu':          'fan_ruangtamu',
+  'Fan_Kamar':              'fan_kamar',
+  'Fan_Dapur':              'fan_dapur',
 }
 
 // Posisi PointLight per ruangan [x, y, z]
 // Sesuaikan dengan koordinat ruangan di GLB kamu
 const ROOM_LIGHTS = [
-  { key: 'lampu_ruangtamu', pos: [0,   2.5, 0],    color: '#ffe8a0', dist: 8  },
-  { key: 'lampu_kamar1',    pos: [4,   2.5, -2],   color: '#ffd080', dist: 6  },
-  { key: 'lampu_kamar2',    pos: [-3,  2.5, -2],   color: '#ffd080', dist: 6  },
-  { key: 'lampu_dapur',     pos: [-1,  2.5, 3],    color: '#fff0c0', dist: 5  },
+  { key: 'lampu_ruangtamu',        pos: [0.33,  0.38,  0.71],  color: '#ffe8a0', dist: 3.5 },
+  { key: 'lampu_dapurdankeluarga', pos: [0.66,  0.38, -0.03],  color: '#fff0c0', dist: 3.5 },
+  { key: 'lampu_kamar1',           pos: [-0.57, 0.38,  0.85],  color: '#ffd080', dist: 2.5 },
+  { key: 'lampu_kamar2',           pos: [1.00,  0.38,  0.88],  color: '#ffd080', dist: 2.5 },
+  { key: 'lampu_kamar3',           pos: [1.69,  0.38,  0.71],  color: '#ffd080', dist: 2.5 },
+  { key: 'lampu_teras',            pos: [0.35,  0.38,  1.65],  color: '#ffe8a0', dist: 2.0 },
+  { key: 'lampu_gerbang',          pos: [-1.30, 0.38,  1.65],  color: '#ffcc66', dist: 2.0 },
+  { key: 'lampu_garasi',           pos: [-1.33, 0.38,  0.42],  color: '#fff0c0', dist: 3.0 },
 ]
 
 export function HouseModel() {
@@ -37,6 +46,7 @@ export function HouseModel() {
     scene.traverse((obj) => {
       if (obj.isMesh) {
         originalMaterials.current[obj.uuid] = obj.material.clone()
+        console.log(`${obj.name} | ${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)}`)
       }
     })
   }, [scene])
