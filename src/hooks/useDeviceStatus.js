@@ -1,67 +1,182 @@
+/**
+ * useDeviceStatus.js
+ */
+
 import { useEffect } from 'react'
-import { ref, onValue, set } from 'firebase/database'
+import { ref, onValue } from 'firebase/database'
+
 import { db } from '../firebase'
 import { useHAOStore } from '../store'
 
-export function useDeviceStatus() {
-  const { setDevices, setSensor, setMode, setAlasan, setFirebaseConnected } = useHAOStore()
+// IMPORT LANGSUNG
+import {
+  publishCommand,
+  publishMode,
+} from './useMQTT'
 
+// DEVICE VALID
+const DEVICE_KEYS = [
+  'lampu_ruangtamu',
+  'lampu_dapurdankeluarga',
+  'lampu_kamar1',
+  'lampu_kamar2',
+  'lampu_kamar3',
+  'lampu_teras',
+  'lampu_gerbang',
+  'lampu_garasi',
+  'fan_ruangtamu',
+  'fan_kamar',
+  'fan_dapur',
+]
+
+export function useDeviceStatus() {
+
+  // STORE
+  const {
+    setDevices,
+    setSensor,
+    setMode,
+    setAlasan,
+    setFirebaseConnected,
+    toggleDeviceLocal,
+  } = useHAOStore()
+
+  // FIREBASE LISTENER
   useEffect(() => {
-    const isConfigured = !db.app.options.apiKey?.includes('YOUR_')
-    if (!isConfigured) {
-      console.info('[HAO] Firebase belum dikonfigurasi → mode lokal aktif')
+
+    if (!db) {
+      console.warn('[Firebase] DB belum ada')
       return
     }
+
+    let unsubStatus = () => {}
+    let unsubSensor = () => {}
+
     try {
-      const unsubDev = onValue(ref(db, 'hao/status'), (snap) => {
-        if (!snap.exists()) return
-        const d = snap.val()
-        setDevices({
-          lampu_ruangtamu: d.lampu_ruangtamu ?? 'OFF',
-          lampu_kamar1:    d.lampu_kamar1    ?? 'OFF',
-          lampu_kamar2:    d.lampu_kamar2    ?? 'OFF',
-          lampu_dapur:     d.lampu_dapur     ?? 'OFF',
-          fan_ruangtamu:   d.fan_ruangtamu   ?? 'OFF',
-          fan_kamar1:      d.fan_kamar1      ?? 'OFF',
-        })
-        if (d.mode)   setMode(d.mode)
-        if (d.alasan) setAlasan(d.alasan)
-        setFirebaseConnected(true)
-      }, (err) => {
-        console.warn('[HAO] Firebase error:', err.message)
-        setFirebaseConnected(false)
-      })
-      const unsubSen = onValue(ref(db, 'hao/sensor'), (snap) => {
-        if (snap.exists()) setSensor(snap.val())
-      })
-      return () => { unsubDev(); unsubSen() }
+
+      // STATUS
+      unsubStatus = onValue(
+        ref(db, 'hao/status'),
+
+        (snapshot) => {
+
+          if (!snapshot.exists()) return
+
+          const data = snapshot.val()
+
+          const devices = {}
+
+          DEVICE_KEYS.forEach((key) => {
+            if (data[key] !== undefined) {
+              devices[key] = data[key]
+            }
+          })
+
+          // UPDATE DEVICE
+          if (Object.keys(devices).length > 0) {
+
+            setDevices((prev) => ({
+              ...prev,
+              ...devices,
+            }))
+          }
+
+          // MODE
+          if (data.mode) {
+            setMode(data.mode)
+          }
+
+          // ALASAN
+          if (data.alasan) {
+            setAlasan(data.alasan)
+          }
+
+          setFirebaseConnected(true)
+        },
+
+        (err) => {
+          console.warn('[Firebase] Status error:', err.message)
+          setFirebaseConnected(false)
+        }
+      )
+
+      // SENSOR
+      unsubSensor = onValue(
+        ref(db, 'hao/sensor'),
+
+        (snapshot) => {
+
+          if (!snapshot.exists()) return
+
+          const data = snapshot.val()
+
+          setSensor({
+            suhu: Number(data.suhu ?? 0),
+            ldr: Number(data.ldr ?? 0),
+            gas: Number(data.gas ?? 0),
+          })
+        },
+
+        (err) => {
+          console.warn('[Firebase] Sensor error:', err.message)
+        }
+      )
+
     } catch (err) {
-      console.warn('[HAO] Firebase tidak tersedia:', err.message)
-    }
-  }, [setDevices, setSensor, setMode, setAlasan, setFirebaseConnected])
 
-  const toggleDevice = async (deviceKey) => {
-    const { mode, firebaseConnected, toggleDeviceLocal } = useHAOStore.getState()
-    if (mode !== 'manual') return
-    if (firebaseConnected) {
-      const current = useHAOStore.getState().devices[deviceKey]
-      try {
-        await set(ref(db, `hao/status/${deviceKey}`), current === 'ON' ? 'OFF' : 'ON')
-      } catch {
-        toggleDeviceLocal(deviceKey)
-      }
-    } else {
-      toggleDeviceLocal(deviceKey)
+      console.warn('[Firebase] Listener gagal:', err.message)
+
+      setFirebaseConnected(false)
     }
+
+    return () => {
+
+      unsubStatus()
+      unsubSensor()
+    }
+
+  }, [])
+
+  // TOGGLE DEVICE
+  const toggleDevice = (deviceKey) => {
+
+    const state = useHAOStore.getState()
+
+    // HANYA MANUAL
+    if (state.mode !== 'manual') {
+
+      console.warn('[HAO] Mode bukan manual')
+
+      return
+    }
+
+    const currentState =
+      state.devices?.[deviceKey]
+
+    const newState =
+      currentState === 'ON'
+        ? 'OFF'
+        : 'ON'
+
+    // OPTIMISTIC UI
+    toggleDeviceLocal(deviceKey)
+
+    // MQTT
+    publishCommand(deviceKey, newState)
   }
 
-  const changeMode = async (newMode) => {
-    const { firebaseConnected } = useHAOStore.getState()
-    useHAOStore.getState().setMode(newMode)
-    if (firebaseConnected) {
-      try { await set(ref(db, 'hao/status/mode'), newMode) } catch {}
-    }
+  // CHANGE MODE
+  const changeMode = (newMode) => {
+
+    // UPDATE UI DULU
+    setMode(newMode)
+
+    // MQTT
+    publishMode(newMode)
   }
 
-  return { toggleDevice, changeMode }
+  return {
+    toggleDevice,
+    changeMode,
+  }
 }

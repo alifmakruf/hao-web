@@ -1,53 +1,71 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-export const useHAOStore = create((set) => ({
+export const useHAOStore = create(
+  persist(
+    (set) => ({
+      // ─── Mode ────────────────────────────────────────────────
+      mode: 'manual',
+      setMode: (mode) => set({ mode }),
 
-  // ── Mode sistem ──────────────────────────────────────────
-  mode: 'manual',   // default manual agar langsung bisa klik device
-  setMode: (mode) => set({ mode }),
+      // ─── Devices ─────────────────────────────────────────────
+      // Key harus konsisten dengan yang di Firebase & HiveMQ
+      devices: {
+        lampu_ruangtamu:        'OFF',
+        lampu_dapurdankeluarga: 'OFF',
+        lampu_kamar1:           'OFF',
+        lampu_kamar2:           'OFF',
+        lampu_kamar3:           'OFF',
+        lampu_teras:            'OFF',
+        lampu_gerbang:          'OFF',
+        lampu_garasi:           'OFF',
+        fan_ruangtamu:          'OFF',
+        fan_kamar:              'OFF',
+        fan_dapur:              'OFF',
+      },
+      setDevices: (devices) => set({ devices }),
+      toggleDeviceLocal: (key) =>
+        set((s) => ({
+          devices: {
+            ...s.devices,
+            [key]: s.devices[key] === 'ON' ? 'OFF' : 'ON',
+          },
+        })),
 
-  // ── Status device ─────────────────────────────────────────
-  devices: {
-  lampu_ruangtamu:        'OFF',
-  lampu_dapurdankeluarga: 'OFF',
-  lampu_kamar1:           'OFF',
-  lampu_kamar2:           'OFF',
-  lampu_kamar3:           'OFF',
-  lampu_teras:            'OFF',
-  lampu_gerbang:          'OFF',
-  lampu_garasi:           'OFF',
-  fan_ruangtamu:          'OFF',
-  fan_kamar:              'OFF',
-  fan_dapur:              'OFF',
-  },
-  setDevices: (devices) => set({ devices }),
+      // ─── Sensor ───────────────────────────────────────────────
+      sensor: { suhu: 27, ldr: 400, gas: 120 },
+      setSensor: (sensor) => set({ sensor }),
 
-  // Toggle lokal tanpa Firebase (untuk demo & testing UI)
-  toggleDeviceLocal: (key) => set((s) => ({
-    devices: {
-      ...s.devices,
-      [key]: s.devices[key] === 'ON' ? 'OFF' : 'ON',
+      // ─── Notifikasi ───────────────────────────────────────────
+      notifs: [],
+      addNotif: (notif) =>
+        set((s) => ({
+          notifs: [...s.notifs.filter((n) => n.id !== notif.id), notif],
+        })),
+      removeNotif: (id) =>
+        set((s) => ({ notifs: s.notifs.filter((n) => n.id !== id) })),
+
+      // ─── Alasan dari n8n ──────────────────────────────────────
+      alasan: '',
+      setAlasan: (alasan) => set({ alasan }),
+
+      // ─── Koneksi Firebase ─────────────────────────────────────
+      firebaseConnected: false,
+      setFirebaseConnected: (v) => set({ firebaseConnected: v }),
+
+      // ─── Koneksi MQTT / HiveMQ ───────────────────────────────
+      mqttConnected: false,
+      setMqttConnected: (v) => set({ mqttConnected: v }),
+
+      mqttStatus: 'disconnected', // 'disconnected' | 'connecting' | 'connected' | 'error'
+      setMqttStatus: (s) => set({ mqttStatus: s }),
+    }),
+    {
+      name: 'hao-storage',
+      partialize: (state) => ({
+        mode:    state.mode,
+        devices: state.devices,
+      }),
     }
-  })),
-
-  // ── Data sensor — nilai default realistis untuk demo ──────
-  sensor: { suhu: 27, ldr: 400, gas: 120 },
-  setSensor: (sensor) => set({ sensor }),
-
-  // ── Notifikasi ala The Sims ────────────────────────────────
-  notifs: [],
-  addNotif: (notif) =>
-    set((s) => ({
-      notifs: [...s.notifs.filter(n => n.id !== notif.id), notif]
-    })),
-  removeNotif: (id) =>
-    set((s) => ({ notifs: s.notifs.filter(n => n.id !== id) })),
-
-  // ── Info dari n8n ─────────────────────────────────────────
-  alasan: 'DEMO_MODE',
-  setAlasan: (alasan) => set({ alasan }),
-
-  // ── Flag Firebase ─────────────────────────────────────────
-  firebaseConnected: false,
-  setFirebaseConnected: (v) => set({ firebaseConnected: v }),
-}))
+  )
+)

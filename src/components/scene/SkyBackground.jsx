@@ -3,20 +3,24 @@ import { useEffect } from 'react'
 import * as THREE from 'three'
 import { useSkyTheme } from '../../hooks/useSkyTheme'
 
-// Mengubah background Canvas + ambient light berdasarkan jam + LDR
-// Dipanggil sekali di dalam Canvas, bukan di luar
-export function SkyBackground() {
+const WEATHER_BG = {
+  sunny:  '#6db3e8',
+  cloudy: '#8899aa',
+  rainy:  '#4a5a6a',
+  night:  '#0a0e1a',
+}
+
+export function SkyBackground({ weatherOverride = 'auto' }) {
   const { gl, scene } = useThree()
-  const { bgColor, ambient, sunColor } = useSkyTheme()
+  const { bgColor } = useSkyTheme()
 
   useEffect(() => {
-    // Set background warna langit
-    scene.background = new THREE.Color(bgColor)
+    const finalColor = weatherOverride !== 'auto'
+      ? WEATHER_BG[weatherOverride]
+      : bgColor
+    scene.background = new THREE.Color(finalColor)
+    scene.fog = new THREE.FogExp2(finalColor, 0.04)
+  }, [bgColor, weatherOverride, scene])
 
-    // Ambient light global sudah diatur lewat props di App.jsx
-    // Di sini kita hanya update fog agar jauh terlihat kabur
-    scene.fog = new THREE.FogExp2(bgColor, 0.04)
-  }, [bgColor, scene])
-
-  return null // komponen ini hanya side-effect, tidak render mesh
+  return null
 }
