@@ -9,7 +9,6 @@ export const useHAOStore = create(
       setMode: (mode) => set({ mode }),
 
       // ─── Devices ─────────────────────────────────────────────
-      // Key harus konsisten dengan yang di Firebase & HiveMQ
       devices: {
         lampu_ruangtamu:        'OFF',
         lampu_dapurdankeluarga: 'OFF',
@@ -23,7 +22,16 @@ export const useHAOStore = create(
         fan_kamar:              'OFF',
         fan_dapur:              'OFF',
       },
-      setDevices: (devices) => set({ devices }),
+
+      // FIX — support updater function (prev) => ({...prev, ...newData})
+      setDevices: (devicesOrUpdater) =>
+        set((s) => ({
+          devices:
+            typeof devicesOrUpdater === 'function'
+              ? devicesOrUpdater(s.devices)
+              : devicesOrUpdater,
+        })),
+
       toggleDeviceLocal: (key) =>
         set((s) => ({
           devices: {
@@ -57,14 +65,20 @@ export const useHAOStore = create(
       mqttConnected: false,
       setMqttConnected: (v) => set({ mqttConnected: v }),
 
-      mqttStatus: 'disconnected', // 'disconnected' | 'connecting' | 'connected' | 'error'
+      mqttStatus: 'disconnected',
       setMqttStatus: (s) => set({ mqttStatus: s }),
+
+      // ─── Scene System ─────────────────────────────────────────
+      activeScene: null,
+      setActiveScene: (scene) => set({ activeScene: scene }),
     }),
     {
       name: 'hao-storage',
+      // FIX — hapus 'devices' dari persist
+      // Devices selalu fresh dari Firebase, tidak perlu disimpan lokal
       partialize: (state) => ({
-        mode:    state.mode,
-        devices: state.devices,
+        mode:        state.mode,
+        activeScene: state.activeScene,
       }),
     }
   )

@@ -1,20 +1,14 @@
-/**
- * useDeviceStatus.js
- */
-
 import { useEffect } from 'react'
-import { ref, onValue } from 'firebase/database'
+import { ref, onValue, set } from 'firebase/database'
 
 import { db } from '../firebase'
 import { useHAOStore } from '../store'
 
-// IMPORT LANGSUNG
 import {
   publishCommand,
   publishMode,
 } from './useMQTT'
 
-// DEVICE VALID
 const DEVICE_KEYS = [
   'lampu_ruangtamu',
   'lampu_dapurdankeluarga',
@@ -31,7 +25,6 @@ const DEVICE_KEYS = [
 
 export function useDeviceStatus() {
 
-  // STORE
   const {
     setDevices,
     setSensor,
@@ -41,9 +34,7 @@ export function useDeviceStatus() {
     toggleDeviceLocal,
   } = useHAOStore()
 
-  // FIREBASE LISTENER
   useEffect(() => {
-
     if (!db) {
       console.warn('[Firebase] DB belum ada')
       return
@@ -54,46 +45,33 @@ export function useDeviceStatus() {
 
     try {
 
-      // STATUS
+      // STATUS — baca semua termasuk mode dari Firebase
       unsubStatus = onValue(
         ref(db, 'hao/status'),
-
         (snapshot) => {
-
           if (!snapshot.exists()) return
 
           const data = snapshot.val()
 
+          // Update devices
           const devices = {}
-
           DEVICE_KEYS.forEach((key) => {
             if (data[key] !== undefined) {
               devices[key] = data[key]
             }
           })
 
-          // UPDATE DEVICE
           if (Object.keys(devices).length > 0) {
-
-            setDevices((prev) => ({
-              ...prev,
-              ...devices,
-            }))
+            setDevices((prev) => ({ ...prev, ...devices }))
           }
 
-          // MODE
-          if (data.mode) {
-            setMode(data.mode)
-          }
+          // Mode dari Firebase — ini single source of truth
+          if (data.mode) setMode(data.mode)
 
-          // ALASAN
-          if (data.alasan) {
-            setAlasan(data.alasan)
-          }
+          if (data.alasan) setAlasan(data.alasan)
 
           setFirebaseConnected(true)
         },
-
         (err) => {
           console.warn('[Firebase] Status error:', err.message)
           setFirebaseConnected(false)
@@ -103,73 +81,71 @@ export function useDeviceStatus() {
       // SENSOR
       unsubSensor = onValue(
         ref(db, 'hao/sensor'),
-
         (snapshot) => {
-
           if (!snapshot.exists()) return
-
           const data = snapshot.val()
-
           setSensor({
             suhu: Number(data.suhu ?? 0),
-            ldr: Number(data.ldr ?? 0),
-            gas: Number(data.gas ?? 0),
+            ldr:  Number(data.ldr  ?? 0),
+            gas:  Number(data.gas  ?? 0),
           })
         },
-
         (err) => {
           console.warn('[Firebase] Sensor error:', err.message)
         }
       )
 
     } catch (err) {
-
       console.warn('[Firebase] Listener gagal:', err.message)
-
       setFirebaseConnected(false)
     }
 
     return () => {
-
       unsubStatus()
       unsubSensor()
     }
 
   }, [])
 
-  // TOGGLE DEVICE
-  const toggleDevice = (deviceKey) => {
-
+  // TOGGLE DEVICE — hanya di mode manual, langsung tulis Firebase
+  const toggleDevice = async (deviceKey) => {
     const state = useHAOStore.getState()
 
-    // HANYA MANUAL
     if (state.mode !== 'manual') {
-
-      console.warn('[HAO] Mode bukan manual')
-
+      console.warn('[HAO] Mode bukan manual, toggle diabaikan')
       return
     }
 
-    const currentState =
-      state.devices?.[deviceKey]
+    const currentState = state.devices?.[deviceKey]
+    const newState     = currentState === 'ON' ? 'OFF' : 'ON'
 
-    const newState =
-      currentState === 'ON'
-        ? 'OFF'
-        : 'ON'
-
-    // OPTIMISTIC UI
+    // Optimistic UI
     toggleDeviceLocal(deviceKey)
 
-    // MQTT
+    // Tulis langsung ke Firebase
+    try {
+      await set(ref(db, `hao/status/${deviceKey}`), newState)
+    } catch (err) {
+      console.warn('[Firebase] Gagal toggle device:', err.message)
+      // Rollback optimistic UI
+      toggleDeviceLocal(deviceKey)
+    }
+
+    // MQTT juga
     publishCommand(deviceKey, newState)
   }
 
-  // CHANGE MODE
-  const changeMode = (newMode) => {
-
-    // UPDATE UI DULU
+  // CHANGE MODE — tulis ke Firebase + MQTT
+  const changeMode = async (newMode) => {
+    // Optimistic UI
     setMode(newMode)
+
+    // Tulis ke Firebase — n8n akan baca ini
+    try {
+      await set(ref(db, 'hao/status/mode'), newMode)
+    } catch (err) {
+      console.warn('[Firebase] Gagal simpan mode:', err.message)
+    }
 
     // MQTT
     publishMode(newMode)

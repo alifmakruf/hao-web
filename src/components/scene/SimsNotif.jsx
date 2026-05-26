@@ -1,7 +1,6 @@
 import { Html } from '@react-three/drei'
 import { useEffect, useState } from 'react'
 
-// Warna per tipe notifikasi
 const TYPE_STYLE = {
   danger:  { bg: '#FCEBEB', border: '#E24B4A', text: '#501313' },
   warning: { bg: '#FAEEDA', border: '#EF9F27', text: '#412402' },
@@ -13,9 +12,8 @@ const TYPE_STYLE = {
 
 export function SimsNotif({ notif }) {
   const [visible, setVisible] = useState(false)
-  const [bounce, setBounce]   = useState(false)
+  const [bounce,  setBounce]  = useState(false)
 
-  // Animasi muncul saat pertama kali render
   useEffect(() => {
     const t1 = setTimeout(() => setVisible(true), 50)
     const t2 = setTimeout(() => setBounce(true),  100)
@@ -26,32 +24,21 @@ export function SimsNotif({ notif }) {
   const style = TYPE_STYLE[notif.type] || TYPE_STYLE.info
 
   return (
-    <Html
-      position={notif.position || [0, 3, 0]}
-      center
-      zIndexRange={[100, 0]}
-    >
+    <Html position={notif.position || [0, 3, 0]} center zIndexRange={[0, 0]}>
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
+        display: 'flex', alignItems: 'center', gap: 6,
         background: style.bg,
         border: `1.5px solid ${style.border}`,
         color: style.text,
-        padding: '5px 10px',
-        borderRadius: 20,
-        fontSize: 12,
-        fontFamily: 'sans-serif',
-        fontWeight: 500,
-        whiteSpace: 'nowrap',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        padding: '5px 10px', borderRadius: 20,
+        fontSize: 12, fontFamily: 'sans-serif', fontWeight: 500,
+        whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         transform: visible
           ? bounce ? 'translateY(-4px) scale(1.05)' : 'translateY(0) scale(1)'
           : 'translateY(10px) scale(0.8)',
         opacity: visible ? 1 : 0,
         transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        pointerEvents: 'none',
-        userSelect: 'none',
+        pointerEvents: 'none', userSelect: 'none',
       }}>
         <span style={{ fontSize: 14 }}>{notif.icon}</span>
         <span>{notif.message}</span>

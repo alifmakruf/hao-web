@@ -26,6 +26,7 @@ import { useDeviceStatus } from './hooks/useDeviceStatus'
 import { useSimsNotif }    from './hooks/useSimsNotif'
 import { useMQTT }         from './hooks/useMQTT'
 import { useHAOStore }     from './store'
+import { SceneSelector } from './components/ui/SceneSelector'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -412,7 +413,8 @@ export default function App() {
         width: showSidebar ? SIDEBAR_WIDTH : 0,
         overflow: 'hidden',
         transition: 'width 0.32s cubic-bezier(0.4,0,0.2,1)',
-        zIndex: 100,
+        zIndex: 99999,
+        isolation: 'isolate'
       }}>
         <div style={{
           width: SIDEBAR_WIDTH,
@@ -476,6 +478,14 @@ export default function App() {
               Mode Sistem
             </div>
             <ModeSelector />
+          </div>
+
+          {/* Scene */}
+          <div style={{ padding: '16px 16px 0' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+              Scene
+            </div>
+            <SceneSelector />
           </div>
 
           {/* Device */}
