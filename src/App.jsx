@@ -6,6 +6,7 @@
  *  - WeatherPanel, IconButton, CameraController
  *  - useMQTT (HiveMQ), useDeviceStatus, useSimsNotif
  *  - ConnectionStatus bar (Firebase + MQTT)
+ *  - Lite Mode toggle (matikan efek berat)
  */
 
 import { Canvas } from '@react-three/fiber'
@@ -26,7 +27,8 @@ import { useDeviceStatus } from './hooks/useDeviceStatus'
 import { useSimsNotif }    from './hooks/useSimsNotif'
 import { useMQTT }         from './hooks/useMQTT'
 import { useHAOStore }     from './store'
-import { SceneSelector } from './components/ui/SceneSelector'
+import { SceneSelector }   from './components/ui/SceneSelector'
+import { TaskPanel }       from './components/ui/TaskPanel'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -44,6 +46,8 @@ const SIDEBAR_WIDTH      = 270
 // ── Scene lighting + weather effects ─────────────────────────────────────────
 function SceneSetup({ weather }) {
   const { ambient, sunColor, isMalam } = useSkyTheme()
+  const { liteMode } = useHAOStore()
+
   const weatherConfig = {
     auto:   { amb: Math.max(ambient, 0.35), sun: sunColor,  night: isMalam },
     sunny:  { amb: 1.0,  sun: '#ffffff',    night: false },
@@ -52,6 +56,7 @@ function SceneSetup({ weather }) {
     night:  { amb: 0.06, sun: '#1a2040',    night: true  },
   }
   const cfg = weatherConfig[weather] || weatherConfig.auto
+
   return (
     <>
       <SkyBackground weatherOverride={weather} />
@@ -60,23 +65,24 @@ function SceneSetup({ weather }) {
         position={[10, 15, 5]}
         intensity={Math.max(cfg.amb, 0.4)}
         color={cfg.sun}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        castShadow={!liteMode}
+        shadow-mapSize-width={liteMode ? 256 : 1024}
+        shadow-mapSize-height={liteMode ? 256 : 1024}
       />
       <directionalLight position={[-5, 2, -5]} intensity={0.3} color="#ffffff" />
-      {cfg.night && <Stars radius={80} depth={40} count={3000} factor={3} fade />}
-      <Rain active={weather === 'rainy'} count={2500} />
-      <ShootingStars active={cfg.night} />
+      {/* Lite mode: matikan Stars, Rain, ShootingStars */}
+      {!liteMode && cfg.night && <Stars radius={80} depth={40} count={3000} factor={3} fade />}
+      {!liteMode && <Rain active={weather === 'rainy'} count={2500} />}
+      {!liteMode && <ShootingStars active={cfg.night} />}
     </>
   )
 }
 
 // ── Global hooks (dipanggil sekali, level atas) ───────────────────────────────
 function AppInitializer() {
-  useMQTT()         
-  useDeviceStatus() 
-  useSimsNotif()     
+  useMQTT()
+  useDeviceStatus()
+  useSimsNotif()
   return null
 }
 
@@ -217,7 +223,6 @@ function ConnectionStatus() {
   return (
     <div style={{
       position: 'absolute',
-      // Letakkan tepat di bawah deretan IconButton (top 16 + 38 height + 8 gap = 62)
       top: 62,
       right: 16,
       zIndex: 1000,
@@ -271,12 +276,13 @@ function ConnectionStatus() {
 
 // ── App utama ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const { firebaseConnected } = useHAOStore()
+  const { firebaseConnected, liteMode, setLiteMode } = useHAOStore()
 
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isAnchored,   setIsAnchored]   = useState(false)
   const [showWeather,  setShowWeather]  = useState(false)
   const [sidebarOpen,  setSidebarOpen]  = useState(true)
+  const [showTask,     setShowTask]     = useState(false)
 
   const [weather, setWeatherState] = useState(
     () => localStorage.getItem('hao-weather') || 'auto'
@@ -387,9 +393,16 @@ export default function App() {
 
       {/* ── 3D Canvas ── */}
       <Canvas
-        shadows
+        shadows={!liteMode}
+        frameloop={liteMode ? 'demand' : 'always'}
         camera={{ position: savedCam ? savedCam.pos : DEFAULT_CAM_POS, fov: 50 }}
-        style={{ width: '100%', height: '100%' }}
+        style={{
+          width: '100%', height: '100%',
+          clipPath: showSidebar
+            ? `inset(0 0 0 ${SIDEBAR_WIDTH}px)`
+            : 'none',
+          transition: 'clip-path 0.32s cubic-bezier(0.4,0,0.2,1)',
+        }}
       >
         <Suspense fallback={null}>
           <SceneSetup weather={weather} />
@@ -535,6 +548,18 @@ export default function App() {
         position: 'absolute', top: 16, right: 16,
         zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center',
       }}>
+        {/* Lite Mode — ditambahkan sebelum Weather */}
+        <IconButton
+          onClick={() => setLiteMode(!liteMode)}
+          title={liteMode ? 'Mode Normal' : 'Mode Lite'}
+          active={liteMode}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6" stroke="white" strokeWidth="1.5"/>
+            <path d="M8 4v4l3 2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </IconButton>
+
         {/* Weather picker */}
         <div ref={weatherRef} style={{ position: 'relative' }}>
           <IconButton onClick={() => setShowWeather(v => !v)} title="Cuaca" active={showWeather || weather !== 'auto'}>
@@ -572,8 +597,52 @@ export default function App() {
       {/* ── Status koneksi Firebase + MQTT ── */}
       <ConnectionStatus />
 
+      {/* Burger button pojok kanan bawah */}
+      <button
+        onClick={() => setShowTask(v => !v)}
+        title="Task Harian"
+        style={{
+          position: 'absolute', bottom: 60, right: 16,
+          zIndex: 99998,
+          width: 46, height: 46, borderRadius: 14,
+          background: showTask
+            ? 'rgba(29,158,117,0.8)' : 'rgba(8,12,24,0.9)',
+          backdropFilter: 'blur(10px)',
+          border: `1px solid ${showTask
+            ? 'rgba(29,158,117,0.6)' : 'rgba(255,255,255,0.15)'}`,
+          cursor: 'pointer',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 4,
+          transition: 'all 0.2s',
+        }}
+      >
+        {[0,1,2].map(i => (
+          <div key={i} style={{
+            width: showTask ? (i === 1 ? 0 : 18) : 18,
+            height: 2, borderRadius: 2,
+            background: 'white',
+            transition: 'all 0.2s',
+            opacity: showTask && i === 1 ? 0 : 1,
+          }} />
+        ))}
+      </button>
+
+      {/* Task Panel */}
+      {showTask && <TaskPanel onClose={() => setShowTask(false)} />}
+
       {/* ── Toast notifikasi ── */}
       <NotifToast />
+
+      <style>{`
+        .sidebar-clip-area {
+          position: absolute;
+          top: 0; left: 0;
+          width: ${showSidebar ? SIDEBAR_WIDTH : 0}px;
+          height: 100%;
+          z-index: 300;
+          pointer-events: none;
+        }
+      `}</style>
     </div>
   )
 }
