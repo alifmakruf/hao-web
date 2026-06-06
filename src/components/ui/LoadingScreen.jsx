@@ -13,36 +13,25 @@ const TIPS = [
   '⚡ n8n memproses logika otomasi di balik layar',
 ]
 
-// Diamond Sims plumbob SVG
-function Plumbob({ pulse }) {
+function Logo({ pulse }) {
   return (
-    <svg
-      width="64"
-      height="80"
-      viewBox="0 0 64 80"
+    <img
+      src="/logo.png"
+      alt="HAO Logo"
       style={{
-        filter: 'drop-shadow(0 0 12px #1D9E75) drop-shadow(0 0 24px #1D9E7588)',
-        animation: pulse ? 'plumbob-float 2s ease-in-out infinite' : 'none',
+        width: 160,
+        height: 160,
+        objectFit: 'contain',
+        filter: 'drop-shadow(0 0 16px rgba(0,180,255,0.6)) drop-shadow(0 0 32px rgba(0,180,255,0.3))',
+        animation: pulse ? 'logo-float 2.5s ease-in-out infinite' : 'none',
       }}
-    >
-      {/* Top diamond */}
-      <polygon points="32,2 54,30 32,42 10,30" fill="#1D9E75" opacity="0.95" />
-      <polygon points="32,2 54,30 32,42"        fill="#185FA5" opacity="0.6"  />
-      <polygon points="32,2 10,30  32,42"        fill="#24c48e" opacity="0.5"  />
-      {/* Bottom diamond */}
-      <polygon points="10,30 54,30 32,78"        fill="#14754f" opacity="0.9"  />
-      <polygon points="32,42 54,30 32,78"        fill="#0d5c3a" opacity="0.7"  />
-      <polygon points="32,42 10,30  32,78"        fill="#1a8f5e" opacity="0.8"  />
-      {/* Highlight */}
-      <polygon points="32,6  50,28 32,20"        fill="white"   opacity="0.2"  />
-    </svg>
+    />
   )
 }
 
-// Diamond progress bar ala The Sims
 function SimsProgressBar({ progress }) {
-  const total    = 20
-  const filled   = Math.round((progress / 100) * total)
+  const total  = 20
+  const filled = Math.round((progress / 100) * total)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -77,16 +66,16 @@ function SimsProgressBar({ progress }) {
 }
 
 export function LoadingScreen({ onDone, onHidden }) {
-  const [progress,   setProgress]   = useState(0)
-  const [tipIndex,   setTipIndex]   = useState(0)
-  const [fadeOut,    setFadeOut]     = useState(false)
-  const [visible,    setVisible]     = useState(true)
+  const [progress, setProgress] = useState(0)
+  const [tipIndex, setTipIndex] = useState(0)
+  const [fadeOut,  setFadeOut]  = useState(false)
+  const [visible,  setVisible]  = useState(true)
+  const [canFinish, setCanFinish] = useState(false) // progress sudah 100?
 
-  // Progress bar naik pelan-pelan, lalu tunggu onDone
+  // Progress naik pelan sampai 90%, lalu berhenti nunggu onDone
   useEffect(() => {
     let current = 0
     const interval = setInterval(() => {
-      // Makin lambat mendekati 90% — nunggu scene beneran siap
       const step = current < 60 ? 2.5 : current < 85 ? 0.8 : 0.2
       current = Math.min(current + step, 90)
       setProgress(current)
@@ -103,26 +92,33 @@ export function LoadingScreen({ onDone, onHidden }) {
     return () => clearInterval(interval)
   }, [])
 
-  // onDone dipanggil dari luar ketika 3D scene ready
+  // Saat scene ready (onDone=true), lompat ke 100% lalu set canFinish
   useEffect(() => {
     if (!onDone) return
     setProgress(100)
-    const t1 = setTimeout(() => setFadeOut(true),  300)
+    const t = setTimeout(() => setCanFinish(true), 600)
+    return () => clearTimeout(t)
+  }, [onDone])
+
+  // Fade out hanya jika progress sudah 100% DAN canFinish true
+  useEffect(() => {
+    if (!canFinish) return
+    const t1 = setTimeout(() => setFadeOut(true), 200)
     const t2 = setTimeout(() => {
       setVisible(false)
-      onHidden?.()   // ← panggil ini setelah benar-benar hilang
+      onHidden?.()
     }, 1100)
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [onDone])
+  }, [canFinish])
 
   if (!visible) return null
 
   return (
     <>
       <style>{`
-        @keyframes plumbob-float {
-          0%, 100% { transform: translateY(0px)   rotate(0deg);   }
-          50%       { transform: translateY(-8px)  rotate(3deg);   }
+        @keyframes logo-float {
+          0%, 100% { transform: translateY(0px);  }
+          50%       { transform: translateY(-8px); }
         }
         @keyframes tip-fade {
           0%   { opacity: 0; transform: translateY(6px);  }
@@ -138,14 +134,14 @@ export function LoadingScreen({ onDone, onHidden }) {
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         gap: 32,
-        opacity:    fadeOut ? 0 : 1,
-        transition: fadeOut ? 'opacity 0.8s ease' : 'none',
+        opacity:       fadeOut ? 0 : 1,
+        transition:    fadeOut ? 'opacity 0.8s ease' : 'none',
         pointerEvents: fadeOut ? 'none' : 'all',
       }}>
 
-        {/* Logo + Plumbob */}
+        {/* Logo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <Plumbob pulse={progress < 100} />
+          <Logo pulse={progress < 100} />
           <div style={{ textAlign: 'center' }}>
             <div style={{
               fontSize: 28, fontWeight: 800, color: 'white',
@@ -163,14 +159,11 @@ export function LoadingScreen({ onDone, onHidden }) {
           </div>
         </div>
 
-        {/* Progress bar diamond */}
+        {/* Progress bar */}
         <SimsProgressBar progress={progress} />
 
         {/* Tips */}
-        <div style={{
-          maxWidth: 320, textAlign: 'center',
-          minHeight: 40,
-        }}>
+        <div style={{ maxWidth: 320, textAlign: 'center', minHeight: 40 }}>
           <p
             key={tipIndex}
             style={{
@@ -184,7 +177,7 @@ export function LoadingScreen({ onDone, onHidden }) {
           </p>
         </div>
 
-        {/* Versi kecil di bawah */}
+        {/* Footer */}
         <div style={{
           position: 'absolute', bottom: 24,
           fontSize: 11, color: 'rgba(255,255,255,0.2)',
