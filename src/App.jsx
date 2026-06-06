@@ -27,9 +27,10 @@ import { useDeviceStatus } from './hooks/useDeviceStatus'
 import { useSimsNotif }    from './hooks/useSimsNotif'
 import { useMQTT }         from './hooks/useMQTT'
 import { useHAOStore }     from './store'
-import { SceneSelector }   from './components/ui/SceneSelector'
+import { AutomationPanel } from './components/ui/AutomationPanel'
 import { TaskPanel }       from './components/ui/TaskPanel'
 import { LoadingScreen } from './components/ui/LoadingScreen'
+import { useAutomation } from './hooks/useAutomation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -84,6 +85,7 @@ function AppInitializer() {
   useMQTT()
   useDeviceStatus()
   useSimsNotif()
+  useAutomation()
   return null
 }
 
@@ -503,12 +505,12 @@ export default function App() {
               <ModeSelector />
             </div>
 
-            {/* Scene */}
+            {/* Automation */}
             <div style={{ padding: '16px 16px 0' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-                Scene
+                Otomasi
               </div>
-              <SceneSelector />
+              <AutomationPanel />
             </div>
 
             {/* Device */}

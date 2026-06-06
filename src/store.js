@@ -31,15 +31,13 @@ export const useHAOStore = create(
           devices: { ...s.devices, [key]: s.devices[key] === 'ON' ? 'OFF' : 'ON' },
         })),
 
-      // ─── Sensor global ────────────────────────────────────────
       sensor: { suhu: 27, ldr: 400, gas: 120 },
       setSensor: (sensor) => set({ sensor }),
 
-      // ─── Sensor per ruangan ───────────────────────────────────
       sensorRuangan: {
-        kamar:   { suhu: 27 },
+        kamar:     { suhu: 27 },
         ruangtamu: { suhu: 27 },
-        dapur:   { suhu: 27 },
+        dapur:     { suhu: 27 },
       },
       setSensorRuangan: (ruangan, data) =>
         set((s) => ({
@@ -67,19 +65,25 @@ export const useHAOStore = create(
       mqttStatus: 'disconnected',
       setMqttStatus: (s) => set({ mqttStatus: s }),
 
-      activeScene: null,
-      setActiveScene: (scene) => set({ activeScene: scene }),
+      // ─── Timezone ─────────────────────────────────────────────
+      // 'WIB' | 'WITA' | 'WIT'
+      timezone: 'WIB',
+      setTimezone: (tz) => set({ timezone: tz }),
 
-      // ─── Lite Mode ────────────────────────────────────────────
+      // ─── Automations ──────────────────────────────────────────
+      // Disimpan juga di Firebase, ini hanya cache lokal
+      automations: [],
+      setAutomations: (automations) => set({ automations }),
+
       liteMode: false,
       setLiteMode: (v) => set({ liteMode: v }),
     }),
     {
       name: 'hao-storage',
       partialize: (state) => ({
-        mode:        state.mode,
-        activeScene: state.activeScene,
-        liteMode:    state.liteMode,
+        mode:     state.mode,
+        liteMode: state.liteMode,
+        timezone: state.timezone,
       }),
     }
   )

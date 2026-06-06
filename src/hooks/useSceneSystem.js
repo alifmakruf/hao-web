@@ -30,8 +30,8 @@ const SCENE_CONFIGS = {
     devices: {
       lampu_ruangtamu: 'OFF', lampu_dapurdankeluarga: 'OFF',
       lampu_kamar1: 'OFF', lampu_kamar2: 'OFF', lampu_kamar3: 'OFF',
-      lampu_teras: 'OFF', lampu_gerbang: 'ON', lampu_garasi: 'OFF',
-      fan_ruangtamu: 'ON', fan_kamar: 'OFF', fan_dapur: 'OFF',
+      lampu_teras: 'OFF', lampu_gerbang: 'OFF', lampu_garasi: 'OFF',
+      fan_ruangtamu: 'OFF', fan_kamar: 'OFF', fan_dapur: 'ON',
     },
   },
   leaving: {
@@ -40,7 +40,7 @@ const SCENE_CONFIGS = {
     devices: {
       lampu_ruangtamu: 'OFF', lampu_dapurdankeluarga: 'OFF',
       lampu_kamar1: 'OFF', lampu_kamar2: 'OFF', lampu_kamar3: 'OFF',
-      lampu_teras: 'OFF', lampu_gerbang: 'OFF', lampu_garasi: 'OFF',
+      lampu_teras: 'ON', lampu_gerbang: 'ON', lampu_garasi: 'OFF',
       fan_ruangtamu: 'OFF', fan_kamar: 'OFF', fan_dapur: 'OFF',
     },
   },
