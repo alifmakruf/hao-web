@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 const TIPS = [
   '💡 Lampu otomatis menyala saat LDR mendeteksi gelap',
@@ -65,21 +65,24 @@ function SimsProgressBar({ progress }) {
   )
 }
 
-export function LoadingScreen({ onDone, onHidden }) {
+export function LoadingScreen({ sceneReady, onHidden }) {
   const [progress, setProgress] = useState(0)
   const [tipIndex, setTipIndex] = useState(0)
   const [fadeOut,  setFadeOut]  = useState(false)
   const [visible,  setVisible]  = useState(true)
-  const [canFinish, setCanFinish] = useState(false) // progress sudah 100?
+  const progressRef = useRef(0)
+  const doneRef     = useRef(false)
 
-  // Progress naik pelan sampai 90%, lalu berhenti nunggu onDone
+  // Progress naik pelan sampai 90%
   useEffect(() => {
-    let current = 0
     const interval = setInterval(() => {
-      const step = current < 60 ? 2.5 : current < 85 ? 0.8 : 0.2
-      current = Math.min(current + step, 90)
-      setProgress(current)
-      if (current >= 90) clearInterval(interval)
+      const step = progressRef.current < 60 ? 2.5
+                 : progressRef.current < 85 ? 0.8
+                 : 0.2
+      const next = Math.min(progressRef.current + step, 90)
+      progressRef.current = next
+      setProgress(next)
+      if (next >= 90) clearInterval(interval)
     }, 80)
     return () => clearInterval(interval)
   }, [])
@@ -92,24 +95,26 @@ export function LoadingScreen({ onDone, onHidden }) {
     return () => clearInterval(interval)
   }, [])
 
-  // Saat scene ready (onDone=true), lompat ke 100% lalu set canFinish
+  // Polling: tunggu sceneReady DAN progress >= 90 sebelum finish
   useEffect(() => {
-    if (!onDone) return
-    setProgress(100)
-    const t = setTimeout(() => setCanFinish(true), 600)
-    return () => clearTimeout(t)
-  }, [onDone])
+    if (!sceneReady) return
 
-  // Fade out hanya jika progress sudah 100% DAN canFinish true
-  useEffect(() => {
-    if (!canFinish) return
-    const t1 = setTimeout(() => setFadeOut(true), 200)
-    const t2 = setTimeout(() => {
-      setVisible(false)
-      onHidden?.()
-    }, 1100)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [canFinish])
+    const check = setInterval(() => {
+      if (progressRef.current >= 90 && !doneRef.current) {
+        doneRef.current = true
+        clearInterval(check)
+
+        setProgress(100)
+        setTimeout(() => setFadeOut(true), 800)
+        setTimeout(() => {
+          setVisible(false)
+          onHidden?.()
+        }, 1700)
+      }
+    }, 100)
+
+    return () => clearInterval(check)
+  }, [sceneReady, onHidden])
 
   if (!visible) return null
 

@@ -390,8 +390,8 @@ export default function App() {
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', fontFamily: 'sans-serif' }}>
       <LoadingScreen 
-        onDone={sceneReady ? true : null}
-        onHidden={() => setLoadingDone(true)} 
+        sceneReady={sceneReady}
+        onHidden={() => setLoadingDone(true)}
       />
       {/* Inisialisasi semua hooks (MQTT + Firebase + Notif) */}
 
