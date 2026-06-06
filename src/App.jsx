@@ -29,6 +29,7 @@ import { useMQTT }         from './hooks/useMQTT'
 import { useHAOStore }     from './store'
 import { SceneSelector }   from './components/ui/SceneSelector'
 import { TaskPanel }       from './components/ui/TaskPanel'
+import { LoadingScreen } from './components/ui/LoadingScreen'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -277,7 +278,8 @@ function ConnectionStatus() {
 // ── App utama ─────────────────────────────────────────────────────────────────
 export default function App() {
   const { firebaseConnected, liteMode, setLiteMode } = useHAOStore()
-
+  const [sceneReady, setSceneReady] = useState(false)
+  const [loadingDone,  setLoadingDone]  = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isAnchored,   setIsAnchored]   = useState(false)
   const [showWeather,  setShowWeather]  = useState(false)
@@ -387,8 +389,12 @@ export default function App() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', fontFamily: 'sans-serif' }}>
-
+      <LoadingScreen 
+        onDone={sceneReady ? true : null}
+        onHidden={() => setLoadingDone(true)} 
+      />
       {/* Inisialisasi semua hooks (MQTT + Firebase + Notif) */}
+
       <AppInitializer />
 
       {/* ── 3D Canvas ── */}
@@ -403,6 +409,7 @@ export default function App() {
             : 'none',
           transition: 'clip-path 0.32s cubic-bezier(0.4,0,0.2,1)',
         }}
+        onCreated={() => setSceneReady(true)}
       >
         <Suspense fallback={null}>
           <SceneSetup weather={weather} />
@@ -418,221 +425,225 @@ export default function App() {
           <CameraController isAnchored={isAnchored} orbitRef={orbitRef} />
         </Suspense>
       </Canvas>
+      
+    {loadingDone && (
+      <>
 
       {/* ── Sidebar kiri ── */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0,
-        height: '100%',
-        width: showSidebar ? SIDEBAR_WIDTH : 0,
-        overflow: 'hidden',
-        transition: 'width 0.32s cubic-bezier(0.4,0,0.2,1)',
-        zIndex: 99999,
-        isolation: 'isolate'
-      }}>
         <div style={{
-          width: SIDEBAR_WIDTH,
+          position: 'absolute', top: 0, left: 0,
           height: '100%',
-          background: 'linear-gradient(160deg, rgba(8,12,24,0.92) 0%, rgba(12,18,36,0.88) 100%)',
-          backdropFilter: 'blur(16px)',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
-          display: 'flex', flexDirection: 'column',
-          overflowY: 'auto',
-          overflowX: 'hidden',
+          width: showSidebar ? SIDEBAR_WIDTH : 0,
+          overflow: 'hidden',
+          transition: 'width 0.32s cubic-bezier(0.4,0,0.2,1)',
+          zIndex: 99999,
+          isolation: 'isolate'
         }}>
+          <div style={{
+            width: SIDEBAR_WIDTH,
+            height: '100%',
+            background: 'linear-gradient(160deg, rgba(8,12,24,0.92) 0%, rgba(12,18,36,0.88) 100%)',
+            backdropFilter: 'blur(16px)',
+            borderRight: '1px solid rgba(255,255,255,0.07)',
+            display: 'flex', flexDirection: 'column',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+          }}>
 
-          {/* Header */}
-          <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Header */}
+            <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: 'linear-gradient(135deg, #1D9E75, #185FA5)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, flexShrink: 0,
+                }}>🏠</div>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'white', letterSpacing: '0.01em' }}>
+                    HAO System
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>
+                    Home Automation
+                  </div>
+                </div>
+              </div>
+
+              {/* Badge status Firebase */}
               <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg, #1D9E75, #185FA5)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, flexShrink: 0,
-              }}>🏠</div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'white', letterSpacing: '0.01em' }}>
-                  HAO System
-                </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>
-                  Home Automation
-                </div>
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                marginTop: 12, padding: '5px 10px', borderRadius: 20,
+                background: firebaseConnected ? 'rgba(29,158,117,0.15)' : 'rgba(186,117,23,0.15)',
+                border: `1px solid ${firebaseConnected ? 'rgba(29,158,117,0.35)' : 'rgba(186,117,23,0.35)'}`,
+              }}>
+                <div style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: firebaseConnected ? '#1D9E75' : '#EF9F27',
+                  boxShadow: firebaseConnected ? '0 0 6px #1D9E75' : '0 0 6px #EF9F27',
+                }} />
+                <span style={{ fontSize: 11, fontWeight: 500, color: firebaseConnected ? '#1D9E75' : '#EF9F27' }}>
+                  {firebaseConnected ? 'Firebase Terhubung' : 'Mode Lokal'}
+                </span>
               </div>
             </div>
 
-            {/* Badge status Firebase */}
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              marginTop: 12, padding: '5px 10px', borderRadius: 20,
-              background: firebaseConnected ? 'rgba(29,158,117,0.15)' : 'rgba(186,117,23,0.15)',
-              border: `1px solid ${firebaseConnected ? 'rgba(29,158,117,0.35)' : 'rgba(186,117,23,0.35)'}`,
-            }}>
-              <div style={{
-                width: 7, height: 7, borderRadius: '50%',
-                background: firebaseConnected ? '#1D9E75' : '#EF9F27',
-                boxShadow: firebaseConnected ? '0 0 6px #1D9E75' : '0 0 6px #EF9F27',
-              }} />
-              <span style={{ fontSize: 11, fontWeight: 500, color: firebaseConnected ? '#1D9E75' : '#EF9F27' }}>
-                {firebaseConnected ? 'Firebase Terhubung' : 'Mode Lokal'}
-              </span>
+            {/* Sensor */}
+            <div style={{ padding: '16px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Sensor
+              </div>
+              <SensorPanel />
             </div>
-          </div>
 
-          {/* Sensor */}
-          <div style={{ padding: '16px 16px 0' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-              Sensor
+            {/* Mode */}
+            <div style={{ padding: '16px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Mode Sistem
+              </div>
+              <ModeSelector />
             </div>
-            <SensorPanel />
-          </div>
 
-          {/* Mode */}
-          <div style={{ padding: '16px 16px 0' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-              Mode Sistem
+            {/* Scene */}
+            <div style={{ padding: '16px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Scene
+              </div>
+              <SceneSelector />
             </div>
-            <ModeSelector />
-          </div>
 
-          {/* Scene */}
-          <div style={{ padding: '16px 16px 0' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-              Scene
+            {/* Device */}
+            <div style={{ padding: '16px 16px 16px', flex: 1 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Perangkat
+              </div>
+              <DeviceCard />
             </div>
-            <SceneSelector />
-          </div>
-
-          {/* Device */}
-          <div style={{ padding: '16px 16px 16px', flex: 1 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-              Perangkat
-            </div>
-            <DeviceCard />
           </div>
         </div>
-      </div>
 
-      {/* ── Tombol toggle sidebar ── */}
-      <button
-        onClick={() => setSidebarOpen(v => !v)}
-        title={showSidebar ? 'Tutup sidebar' : 'Buka sidebar'}
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: showSidebar ? SIDEBAR_WIDTH : 0,
-          transform: 'translateY(-50%)',
-          transition: 'left 0.32s cubic-bezier(0.4,0,0.2,1)',
-          zIndex: 200,
-          width: 20, height: 56,
-          background: 'rgba(20,28,50,0.92)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderLeft: showSidebar ? 'none' : '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '0 8px 8px 0',
-          cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'rgba(255,255,255,0.6)',
-          fontSize: 12, padding: 0,
-        }}
-      >
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
-          {showSidebar ? (
-            <path d="M7 2L2 8L7 14" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          ) : (
-            <path d="M3 2L8 8L3 14" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          )}
-        </svg>
-      </button>
-
-      {/* ── Tombol kanan atas ── */}
-      <div style={{
-        position: 'absolute', top: 16, right: 16,
-        zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center',
-      }}>
-        {/* Lite Mode — ditambahkan sebelum Weather */}
-        <IconButton
-          onClick={() => setLiteMode(!liteMode)}
-          title={liteMode ? 'Mode Normal' : 'Mode Lite'}
-          active={liteMode}
+        {/* ── Tombol toggle sidebar ── */}
+        <button
+          onClick={() => setSidebarOpen(v => !v)}
+          title={showSidebar ? 'Tutup sidebar' : 'Buka sidebar'}
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: showSidebar ? SIDEBAR_WIDTH : 0,
+            transform: 'translateY(-50%)',
+            transition: 'left 0.32s cubic-bezier(0.4,0,0.2,1)',
+            zIndex: 200,
+            width: 20, height: 56,
+            background: 'rgba(20,28,50,0.92)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderLeft: showSidebar ? 'none' : '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '0 8px 8px 0',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: 12, padding: 0,
+          }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6" stroke="white" strokeWidth="1.5"/>
-            <path d="M8 4v4l3 2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+            {showSidebar ? (
+              <path d="M7 2L2 8L7 14" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            ) : (
+              <path d="M3 2L8 8L3 14" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            )}
           </svg>
-        </IconButton>
+        </button>
 
-        {/* Weather picker */}
-        <div ref={weatherRef} style={{ position: 'relative' }}>
-          <IconButton onClick={() => setShowWeather(v => !v)} title="Cuaca" active={showWeather || weather !== 'auto'}>
-            <span style={{ fontSize: 17, lineHeight: 1 }}>{activeWeather?.icon ?? '🌤️'}</span>
+        {/* ── Tombol kanan atas ── */}
+        <div style={{
+          position: 'absolute', top: 16, right: 16,
+          zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center',
+        }}>
+          {/* Lite Mode — ditambahkan sebelum Weather */}
+          <IconButton
+            onClick={() => setLiteMode(!liteMode)}
+            title={liteMode ? 'Mode Normal' : 'Mode Lite'}
+            active={liteMode}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="white" strokeWidth="1.5"/>
+              <path d="M8 4v4l3 2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
           </IconButton>
-          {showWeather && (
-            <WeatherPanel weather={weather} onChange={setWeather} onClose={() => setShowWeather(false)} />
-          )}
+
+          {/* Weather picker */}
+          <div ref={weatherRef} style={{ position: 'relative' }}>
+            <IconButton onClick={() => setShowWeather(v => !v)} title="Cuaca" active={showWeather || weather !== 'auto'}>
+              <span style={{ fontSize: 17, lineHeight: 1 }}>{activeWeather?.icon ?? '🌤️'}</span>
+            </IconButton>
+            {showWeather && (
+              <WeatherPanel weather={weather} onChange={setWeather} onClose={() => setShowWeather(false)} />
+            )}
+          </div>
+
+          {/* Top-down / perspektif */}
+          <IconButton onClick={toggleAnchor} title={isAnchored ? 'Kembali ke Perspektif' : 'Top-Down View'} active={isAnchored}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="2" width="14" height="14" rx="2" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.6" fill="none"/>
+              <line x1="9" y1="2" x2="9" y2="16" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.2" strokeDasharray="2 2"/>
+              <line x1="2" y1="9" x2="16" y2="9" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.2" strokeDasharray="2 2"/>
+              <circle cx="9" cy="9" r="2" fill={isAnchored ? '#ff6363' : 'white'}/>
+            </svg>
+          </IconButton>
+
+          {/* Fullscreen */}
+          <IconButton onClick={toggleFullscreen} title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'} active={isFullscreen}>
+            {isFullscreen ? (
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M6 2v4H2M12 2v4h4M6 16v-4H2M12 16v-4h4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </IconButton>
         </div>
 
-        {/* Top-down / perspektif */}
-        <IconButton onClick={toggleAnchor} title={isAnchored ? 'Kembali ke Perspektif' : 'Top-Down View'} active={isAnchored}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="2" y="2" width="14" height="14" rx="2" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.6" fill="none"/>
-            <line x1="9" y1="2" x2="9" y2="16" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.2" strokeDasharray="2 2"/>
-            <line x1="2" y1="9" x2="16" y2="9" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.2" strokeDasharray="2 2"/>
-            <circle cx="9" cy="9" r="2" fill={isAnchored ? '#ff6363' : 'white'}/>
-          </svg>
-        </IconButton>
+        {/* ── Status koneksi Firebase + MQTT ── */}
+        <ConnectionStatus />
 
-        {/* Fullscreen */}
-        <IconButton onClick={toggleFullscreen} title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'} active={isFullscreen}>
-          {isFullscreen ? (
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M6 2v4H2M12 2v4h4M6 16v-4H2M12 16v-4h4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          )}
-        </IconButton>
-      </div>
-
-      {/* ── Status koneksi Firebase + MQTT ── */}
-      <ConnectionStatus />
-
-      {/* Burger button pojok kanan bawah */}
-      <button
-        onClick={() => setShowTask(v => !v)}
-        title="Task Harian"
-        style={{
-          position: 'absolute', bottom: 60, right: 16,
-          zIndex: 99998,
-          width: 46, height: 46, borderRadius: 14,
-          background: showTask
-            ? 'rgba(29,158,117,0.8)' : 'rgba(8,12,24,0.9)',
-          backdropFilter: 'blur(10px)',
-          border: `1px solid ${showTask
-            ? 'rgba(29,158,117,0.6)' : 'rgba(255,255,255,0.15)'}`,
-          cursor: 'pointer',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 4,
-          transition: 'all 0.2s',
-        }}
-      >
-        {[0,1,2].map(i => (
-          <div key={i} style={{
-            width: showTask ? (i === 1 ? 0 : 18) : 18,
-            height: 2, borderRadius: 2,
-            background: 'white',
+        {/* Burger button pojok kanan bawah */}
+        <button
+          onClick={() => setShowTask(v => !v)}
+          title="Task Harian"
+          style={{
+            position: 'absolute', bottom: 60, right: 16,
+            zIndex: 99998,
+            width: 46, height: 46, borderRadius: 14,
+            background: showTask
+              ? 'rgba(29,158,117,0.8)' : 'rgba(8,12,24,0.9)',
+            backdropFilter: 'blur(10px)',
+            border: `1px solid ${showTask
+              ? 'rgba(29,158,117,0.6)' : 'rgba(255,255,255,0.15)'}`,
+            cursor: 'pointer',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 4,
             transition: 'all 0.2s',
-            opacity: showTask && i === 1 ? 0 : 1,
-          }} />
-        ))}
-      </button>
+          }}
+        >
+          {[0,1,2].map(i => (
+            <div key={i} style={{
+              width: showTask ? (i === 1 ? 0 : 18) : 18,
+              height: 2, borderRadius: 2,
+              background: 'white',
+              transition: 'all 0.2s',
+              opacity: showTask && i === 1 ? 0 : 1,
+            }} />
+          ))}
+        </button>
 
-      {/* Task Panel */}
-      {showTask && <TaskPanel onClose={() => setShowTask(false)} />}
+        {/* Task Panel */}
+        {showTask && <TaskPanel onClose={() => setShowTask(false)} />}
 
-      {/* ── Toast notifikasi ── */}
-      <NotifToast />
-
+        {/* ── Toast notifikasi ── */}
+        <NotifToast />
+      </>
+    )}
       <style>{`
         .sidebar-clip-area {
           position: absolute;
