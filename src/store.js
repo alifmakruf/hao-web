@@ -75,6 +75,10 @@ export const useHAOStore = create(
       automations: [],
       setAutomations: (automations) => set({ automations }),
 
+      // ─── Preset Suhu ──────────────────────────────────────────
+      tempPresets: [],
+      setTempPresets: (presets) => set({ tempPresets: presets }),
+
       liteMode: false,
       setLiteMode: (v) => set({ liteMode: v }),
     }),

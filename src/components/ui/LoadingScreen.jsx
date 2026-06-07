@@ -2,8 +2,6 @@ import { useEffect, useState, useRef } from 'react'
 
 const TIPS = [
   '💡 Lampu otomatis menyala saat LDR mendeteksi gelap',
-  '🌡 Mode Adaptif menyesuaikan suhu ruangan secara pintar',
-  '🌀 Kipas nyala otomatis kalau suhu di atas 30°C',
   '☠ Sensor gas akan membunyikan peringatan darurat',
   '🔄 Mode Auto mengikuti kondisi sensor secara real-time',
   '🧠 Mode Adaptif belajar dari pola waktu dan sensor',
@@ -188,7 +186,7 @@ export function LoadingScreen({ sceneReady, onHidden }) {
           fontSize: 11, color: 'rgba(255,255,255,0.2)',
           fontFamily: 'sans-serif', letterSpacing: '0.1em',
         }}>
-          HAO v1.1 · ESP32 + Firebase + HiveMQ
+          HAO v1.2 · ESP32 + Firebase + HiveMQ
         </div>
       </div>
     </>
