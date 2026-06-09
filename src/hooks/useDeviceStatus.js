@@ -42,30 +42,31 @@ export function useDeviceStatus() {
         setFirebaseConnected(false)
       })
 
-      // Sensor global (suhu, ldr, gas)
+      // Sensor global — fallback ke semua ruangan
       unsubSensor = onValue(ref(db, 'hao/sensor'), (snap) => {
         if (!snap.exists()) return
         const data = snap.val()
-        setSensor({
-          suhu: Number(data.suhu ?? 0),
-          ldr:  Number(data.ldr  ?? 0),
-          gas:  Number(data.gas  ?? 0),
-        })
-        // Fallback: kalau tidak ada sensor per ruangan,
-        // pakai sensor global untuk semua ruangan
-        setSensorRuangan('ruangtamu', { suhu: Number(data.suhu ?? 0) })
-        setSensorRuangan('dapur',     { suhu: Number(data.suhu ?? 0) })
+        const suhu = Number(data.suhu ?? 0)
+        const ldr  = Number(data.ldr  ?? 0)
+        const gas  = Number(data.gas  ?? 0)
+
+        setSensor({ suhu, ldr, gas })
+
+        // Fallback semua ruangan pakai nilai global
+        // (akan di-override oleh hao/sensor_ruangan kalau ada)
+        setSensorRuangan('ruangtamu', { suhu })
+        setSensorRuangan('kamar',     { suhu }) // ← fix: ini yang sebelumnya kurang
+        setSensorRuangan('dapur',     { suhu })
       }, (err) => {
         console.warn('[Firebase] Sensor error:', err.message)
       })
 
-      // Sensor per ruangan — kalau ESP32 kamu kirim ke path ini
-      // hao/sensor/kamar, hao/sensor/ruangtamu, hao/sensor/dapur
+      // Sensor per ruangan — override fallback di atas
       unsubSensorR = onValue(ref(db, 'hao/sensor_ruangan'), (snap) => {
         if (!snap.exists()) return
         const data = snap.val()
-        if (data.kamar)     setSensorRuangan('kamar',     { suhu: Number(data.kamar.suhu     ?? 0) })
         if (data.ruangtamu) setSensorRuangan('ruangtamu', { suhu: Number(data.ruangtamu.suhu ?? 0) })
+        if (data.kamar)     setSensorRuangan('kamar',     { suhu: Number(data.kamar.suhu     ?? 0) })
         if (data.dapur)     setSensorRuangan('dapur',     { suhu: Number(data.dapur.suhu     ?? 0) })
       }, (err) => {
         console.warn('[Firebase] Sensor ruangan error:', err.message)
@@ -91,7 +92,7 @@ export function useDeviceStatus() {
       await set(ref(db, `hao/status/${deviceKey}`), newState)
     } catch (err) {
       console.warn('[Firebase] Gagal toggle:', err.message)
-      toggleDeviceLocal(deviceKey) // rollback
+      toggleDeviceLocal(deviceKey)
     }
     publishCommand(deviceKey, newState)
   }

@@ -10,9 +10,11 @@ function getTempBg(v) {
 const SENSOR_CONFIG = [
   {
     key: 'ldr', label: 'Cahaya', icon: '☀',
-    getColor: (v) => v > 700 ? '#EF9F27' : v < 200 ? '#534AB7' : '#1D9E75',
-    getBg:    (v) => v > 700 ? '#FAEEDA' : v < 200 ? '#EEEDFE' : '#E1F5EE',
-    format:   (v) => v > 700 ? 'Terang' : v < 200 ? 'Gelap' : 'Normal',
+    // FIX: LDR DO HIGH=gelap(nilai rendah 100), LOW=terang(nilai tinggi 800)
+    // jadi nilai rendah = gelap, nilai tinggi = terang
+    getColor: (v) => v >= 600 ? '#EF9F27' : v >= 300 ? '#1D9E75' : '#534AB7',
+    getBg:    (v) => v >= 600 ? '#FAEEDA' : v >= 300 ? '#E1F5EE' : '#EEEDFE',
+    format:   (v) => v >= 600 ? 'Terang'  : v >= 300 ? 'Normal'  : 'Gelap',
   },
   {
     key: 'gas', label: 'Gas', icon: '💨',
