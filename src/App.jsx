@@ -31,6 +31,7 @@ import { AutomationPanel } from './components/ui/AutomationPanel'
 import { TaskPanel }       from './components/ui/TaskPanel'
 import { LoadingScreen } from './components/ui/LoadingScreen'
 import { useAutomation } from './hooks/useAutomation'
+import { TechFrame } from './components/scene/TechFrame'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -424,6 +425,7 @@ export default function App() {
             maxDistance={24}
             enablePan={true}
           />
+          <TechFrame />
           <CameraController isAnchored={isAnchored} orbitRef={orbitRef} />
         </Suspense>
       </Canvas>
