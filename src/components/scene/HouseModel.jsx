@@ -1,9 +1,9 @@
 import { useGLTF, Html } from '@react-three/drei'
 import { useRef, useEffect } from 'react'
 import * as THREE from 'three'
-import { RoomLight } from './RoomLight'
-import { SimsNotif } from './SimsNotif'
-import { useHAOStore } from '../../store'
+import { RoomLight }       from './RoomLight'
+import { SimsNotif }       from './SimsNotif'
+import { useHAOStore }     from '../../store'
 import { useDeviceStatus } from '../../hooks/useDeviceStatus'
 
 const DEVICE_MESH_MAP = {
@@ -21,21 +21,35 @@ const DEVICE_MESH_MAP = {
 }
 
 const ROOM_LIGHTS = [
-  { key: 'lampu_ruangtamu',        pos: [0.33,  0.38,  0.71],  color: '#ffe8a0', dist: 3.5 },
-  { key: 'lampu_dapurdankeluarga', pos: [0.66,  0.38, -0.03],  color: '#fff0c0', dist: 3.5 },
-  { key: 'lampu_kamar1',           pos: [-0.57, 0.38,  0.85],  color: '#ffd080', dist: 2.5 },
-  { key: 'lampu_kamar2',           pos: [1.00,  0.38,  0.88],  color: '#ffd080', dist: 2.5 },
-  { key: 'lampu_kamar3',           pos: [1.69,  0.38,  0.71],  color: '#ffd080', dist: 2.5 },
-  { key: 'lampu_teras',            pos: [0.35,  0.38,  1.65],  color: '#ffe8a0', dist: 2.0 },
-  { key: 'lampu_gerbang',          pos: [-1.30, 0.38,  1.65],  color: '#ffcc66', dist: 2.0 },
-  { key: 'lampu_garasi',           pos: [-1.33, 0.38,  0.42],  color: '#fff0c0', dist: 3.0 },
+  { key: 'lampu_ruangtamu',        pos: [0.33,  0.38,  0.71], color: '#ffe8a0', dist: 3.5 },
+  { key: 'lampu_dapurdankeluarga', pos: [0.66,  0.38, -0.03], color: '#fff0c0', dist: 3.5 },
+  { key: 'lampu_kamar1',           pos: [-0.57, 0.38,  0.85], color: '#ffd080', dist: 2.5 },
+  { key: 'lampu_kamar2',           pos: [1.00,  0.38,  0.88], color: '#ffd080', dist: 2.5 },
+  { key: 'lampu_kamar3',           pos: [1.69,  0.38,  0.71], color: '#ffd080', dist: 2.5 },
+  { key: 'lampu_teras',            pos: [0.35,  0.38,  1.65], color: '#ffe8a0', dist: 2.0 },
+  { key: 'lampu_gerbang',          pos: [-1.30, 0.38,  1.65], color: '#ffcc66', dist: 2.0 },
+  { key: 'lampu_garasi',           pos: [-1.33, 0.38,  0.42], color: '#fff0c0', dist: 3.0 },
 ]
 
-export function HouseModel() {
+// Posisi tepat dari mesh DHT dan Gas di Blender
+const ROOM_TEMP_LABELS = [
+  { key: 'ruangtamu', label: 'Ruang Tamu', pos: [0.077,  0.62, 0.379]  },
+  { key: 'kamar',     label: 'Kamar',      pos: [-0.127, 0.62, 1.155]  },
+  { key: 'dapur',     label: 'Dapur',      pos: [0.174,  0.62, -0.465] },
+]
+
+// Posisi sensor gas
+const GAS_POS = [-0.236, 0.62, -0.465]
+
+export function HouseModel({ onReady }) {
   const { scene } = useGLTF('/untitled4444.glb')
-  const { devices, mode, notifs } = useHAOStore()
+  const { devices, mode, notifs, sensor, sensorRuangan } = useHAOStore()
   const { toggleDevice } = useDeviceStatus()
   const originalMaterials = useRef({})
+
+  useEffect(() => {
+    if (scene) onReady?.()
+  }, [scene])
 
   useEffect(() => {
     scene.traverse((obj) => {
@@ -81,6 +95,25 @@ export function HouseModel() {
     document.body.style.cursor = 'default'
   }
 
+  // Warna & icon berdasarkan suhu
+  const getTempStyle = (suhu) => {
+    const isHot  = suhu > 35
+    const isWarm = suhu > 29
+    return {
+      color:   isHot ? '#D85A30' : isWarm ? '#EF9F27' : '#1D9E75',
+      bg:      isHot ? 'rgba(216,90,48,0.88)' : isWarm ? 'rgba(239,159,39,0.88)' : 'rgba(29,158,117,0.88)',
+      icon:    isHot ? '🔥' : isWarm ? '🌡' : '❄',
+    }
+  }
+
+  // Warna & label gas
+  const gasVal = sensor.gas ?? 0
+  const gasStyle = {
+    color: gasVal > 800 ? '#E24B4A' : gasVal > 400 ? '#EF9F27' : '#1D9E75',
+    bg:    gasVal > 800 ? 'rgba(226,75,74,0.88)' : gasVal > 400 ? 'rgba(239,159,39,0.88)' : 'rgba(29,158,117,0.88)',
+    label: gasVal > 800 ? '☠ Bahaya!' : gasVal > 400 ? '⚠ Waspada' : '✓ Aman',
+  }
+
   return (
     <group>
       <primitive
@@ -90,6 +123,7 @@ export function HouseModel() {
         onPointerOut={handlePointerOut}
       />
 
+      {/* Lampu room light */}
       {ROOM_LIGHTS.map(({ key, pos, color, dist }) => (
         <RoomLight
           key={key}
@@ -100,33 +134,58 @@ export function HouseModel() {
         />
       ))}
 
-      {/* Label lampu & fan — tampil di mode manual */}
-      {mode === 'manual' && Object.entries(DEVICE_MESH_MAP).map(([meshName, deviceKey]) => {
-        const light = ROOM_LIGHTS.find(l => l.key === deviceKey)
-        if (!light) return null
-        const isOn = devices[deviceKey] === 'ON'
+      {/* Label suhu per ruangan — tepat di posisi mesh DHT */}
+      {ROOM_TEMP_LABELS.map(({ key, label, pos }) => {
+        const suhu = sensorRuangan?.[key]?.suhu ?? sensor.suhu
+        const { color, bg, icon } = getTempStyle(suhu)
         return (
           <Html
-            key={deviceKey}
-            position={[light.pos[0], light.pos[1] + 0.4, light.pos[2]]}
+            key={key}
+            position={pos}
             center
             style={{ pointerEvents: 'none' }}
           >
             <div style={{
-              background: isOn ? 'rgba(255,220,100,0.9)' : 'rgba(0,0,0,0.7)',
-              color: isOn ? '#412402' : '#ffffff',
-              padding: '3px 8px', borderRadius: 8,
-              fontSize: 11, fontFamily: 'sans-serif',
-              whiteSpace: 'nowrap',
-              border: `1px solid ${isOn ? '#EF9F27' : '#555'}`,
+              background:   bg,
+              color:        'white',
+              padding:      '3px 9px',
+              borderRadius: 8,
+              fontSize:     11,
+              fontFamily:   'sans-serif',
+              whiteSpace:   'nowrap',
+              border:       `1px solid ${color}`,
+              fontWeight:   600,
+              boxShadow:    `0 0 8px ${color}55`,
             }}>
-              {deviceKey.startsWith('lampu') ? '💡' : '🌀'} {isOn ? 'ON' : 'OFF'}
+              {icon} {suhu.toFixed(1)}°C
             </div>
           </Html>
         )
       })}
 
-      {/* Notifikasi ala The Sims */}
+      {/* Label gas — tepat di posisi mesh Gas */}
+      <Html
+        position={GAS_POS}
+        center
+        style={{ pointerEvents: 'none' }}
+      >
+        <div style={{
+          background:   gasStyle.bg,
+          color:        'white',
+          padding:      '3px 9px',
+          borderRadius: 8,
+          fontSize:     11,
+          fontFamily:   'sans-serif',
+          whiteSpace:   'nowrap',
+          border:       `1px solid ${gasStyle.color}`,
+          fontWeight:   600,
+          boxShadow:    `0 0 8px ${gasStyle.color}55`,
+        }}>
+          💨 {gasStyle.label}
+        </div>
+      </Html>
+
+      {/* Notifikasi ala The Sims — tidak diubah */}
       {notifs.map((notif) => (
         <SimsNotif key={notif.id} notif={notif} />
       ))}
