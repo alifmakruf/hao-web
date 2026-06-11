@@ -19,6 +19,11 @@ const FAN_DEVICES = [
   { key: 'fan_dapur',     label: 'Kipas Dapur',      room: 'dapur'     },
 ]
 
+const ALL_DEVICES = [
+  ...LAMP_DEVICES,
+  ...FAN_DEVICES.map(f => ({ key: f.key, label: f.label, icon: '🌀' })),
+]
+
 const ROOM_LABELS = { ruangtamu: 'Ruang Tamu', kamar: 'Kamar', dapur: 'Dapur' }
 
 const DAYS = [
@@ -43,14 +48,31 @@ function emptyPresetForm() {
   return { name: '', threshold: { ruangtamu: 30, kamar: 30, dapur: 30 } }
 }
 
-// ── Tab: Aturan Otomasi ───────────────────────────────────────
-function AutomationTab() {
-  const { automations, tempPresets, timezone, setTimezone, mode } = useHAOStore()
-  const { addAutomation, deleteAutomation, toggleAutomation } = useAutomation()
+// Konversi rule dari Firebase ke bentuk form
+function ruleToForm(rule) {
+  if (rule.type === 'time') {
+    return {
+      type: 'time',
+      name: rule.name ?? '',
+      selectedDays: Array.isArray(rule.days) ? rule.days : [],
+      startHour:    rule.startHour   ?? 6,
+      startMinute:  rule.startMinute ?? 0,
+      endHour:      rule.endHour     ?? 18,
+      endMinute:    rule.endMinute   ?? 0,
+      devices:      rule.devices     ?? [],
+    }
+  }
+  if (rule.type === 'ldr') {
+    return { type: 'ldr', name: rule.name ?? '', condition: rule.condition ?? 'mendung', devices: rule.devices ?? [] }
+  }
+  return { type: 'temp', name: rule.name ?? '', fanKey: rule.fanKey ?? 'fan_kamar', presetId: rule.presetId ?? '' }
+}
 
-  const [showForm, setShowForm] = useState(false)
-  const [formType, setFormType] = useState('time')
-  const [form, setForm]         = useState(emptyTimeForm())
+// ── Form Otomasi (Add / Edit) ──────────────────────────────────
+function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
+  const isEdit = !!editRule
+  const [formType, setFormType] = useState(editRule?.type ?? 'time')
+  const [form, setForm]         = useState(editRule ? ruleToForm(editRule) : emptyTimeForm())
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
 
@@ -112,13 +134,219 @@ function AutomationTab() {
       rule = { type: 'temp', name: form.name.trim(), fanKey: form.fanKey, presetId: form.presetId }
     }
 
-    const ok = await addAutomation(rule)
+    const ok = await onSave(rule)
     setLoading(false)
-    if (ok) { setShowForm(false); setForm(emptyTimeForm()) }
-    else setError('Gagal menyimpan')
+    if (!ok) setError('Gagal menyimpan')
   }
 
-  const pad = (n) => String(n).padStart(2, '0')
+  return (
+    <div style={{ padding: '12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${isEdit ? 'rgba(99,184,255,0.3)' : 'rgba(255,255,255,0.1)'}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+      {isEdit && (
+        <div style={{ fontSize: 11, color: 'rgba(99,184,255,0.8)', marginBottom: -2 }}>✏️ Edit Aturan</div>
+      )}
+
+      {/* Tipe — hanya tampil saat tambah baru */}
+      {!isEdit && (
+        <div style={{ display: 'flex', gap: 5 }}>
+          {[
+            { t: 'time', label: '⏰ Waktu' },
+            { t: 'ldr',  label: '☀ Cahaya' },
+            { t: 'temp', label: '🌡 Suhu' },
+          ].map(({ t, label }) => (
+            <button key={t} onClick={() => switchType(t)} style={{
+              flex: 1, padding: '6px', borderRadius: 8, fontSize: 11,
+              background: formType === t ? 'rgba(99,184,255,0.2)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${formType === t ? 'rgba(99,184,255,0.5)' : 'rgba(255,255,255,0.1)'}`,
+              color: 'white', cursor: 'pointer',
+            }}>{label}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Nama */}
+      <div>
+        <div style={labelStyle}>Nama Aturan</div>
+        <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          placeholder="cth: Lampu malam hari" style={inputStyle} />
+      </div>
+
+      {/* Form Waktu */}
+      {formType === 'time' && (
+        <>
+          <div>
+            <div style={labelStyle}>Hari (kosong = setiap hari)</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {DAYS.map(({ value, label }) => {
+                const sel = form.selectedDays.includes(value)
+                return (
+                  <button key={value} onClick={() => toggleDay(value)} style={{
+                    padding: '4px 8px', borderRadius: 6, fontSize: 11,
+                    background: sel ? 'rgba(29,158,117,0.3)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${sel ? '#1D9E75' : 'rgba(255,255,255,0.1)'}`,
+                    color: sel ? '#1D9E75' : 'rgba(255,255,255,0.5)', cursor: 'pointer',
+                  }}>{label}</button>
+                )
+              })}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={labelStyle}>Mulai</div>
+              <input type="time"
+                value={`${pad(form.startHour)}:${pad(form.startMinute)}`}
+                onChange={e => { const [h,m] = e.target.value.split(':').map(Number); setForm(f => ({ ...f, startHour: h, startMinute: m })) }}
+                style={{ ...inputStyle, colorScheme: 'dark' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={labelStyle}>Selesai</div>
+              <input type="time"
+                value={`${pad(form.endHour)}:${pad(form.endMinute)}`}
+                onChange={e => { const [h,m] = e.target.value.split(':').map(Number); setForm(f => ({ ...f, endHour: h, endMinute: m })) }}
+                style={{ ...inputStyle, colorScheme: 'dark' }} />
+            </div>
+          </div>
+          <div>
+            <div style={labelStyle}>Perangkat yang Nyala</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+              {ALL_DEVICES.map(({ key, label, icon }) => {
+                const sel = form.devices?.includes(key)
+                return (
+                  <button key={key} onClick={() => toggleDevice(key)} style={{
+                    padding: '5px 6px', borderRadius: 7, fontSize: 10,
+                    background: sel ? 'rgba(29,158,117,0.2)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${sel ? '#1D9E75' : 'rgba(255,255,255,0.08)'}`,
+                    color: sel ? '#1D9E75' : 'rgba(255,255,255,0.5)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <span>{icon}</span><span style={{ fontSize: 9 }}>{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Form LDR */}
+      {formType === 'ldr' && (
+        <>
+          <div>
+            <div style={labelStyle}>Kondisi Cahaya</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['cerah','mendung'].map(c => (
+                <button key={c} onClick={() => setForm(f => ({ ...f, condition: c }))} style={{
+                  flex: 1, padding: '6px', borderRadius: 8, fontSize: 12,
+                  background: form.condition === c ? 'rgba(239,159,39,0.2)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${form.condition === c ? '#EF9F27' : 'rgba(255,255,255,0.1)'}`,
+                  color: form.condition === c ? '#EF9F27' : 'rgba(255,255,255,0.5)', cursor: 'pointer',
+                }}>{c === 'cerah' ? '☀ Cerah' : '☁ Mendung'}</button>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Aktif pukul 06:00–18:30</div>
+          </div>
+          <div>
+            <div style={labelStyle}>Lampu yang Nyala</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+              {LAMP_DEVICES.map(({ key, label }) => {
+                const sel = form.devices?.includes(key)
+                return (
+                  <button key={key} onClick={() => toggleDevice(key)} style={{
+                    padding: '5px 6px', borderRadius: 7, fontSize: 10,
+                    background: sel ? 'rgba(29,158,117,0.2)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${sel ? '#1D9E75' : 'rgba(255,255,255,0.08)'}`,
+                    color: sel ? '#1D9E75' : 'rgba(255,255,255,0.5)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <span>💡</span><span style={{ fontSize: 9 }}>{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Form Suhu */}
+      {formType === 'temp' && (
+        <>
+          <div>
+            <div style={labelStyle}>Kipas</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {FAN_DEVICES.map(({ key, label, room }) => (
+                <button key={key} onClick={() => setForm(f => ({ ...f, fanKey: key }))} style={{
+                  padding: '7px 10px', borderRadius: 8, fontSize: 12, textAlign: 'left',
+                  background: form.fanKey === key ? 'rgba(99,184,255,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${form.fanKey === key ? 'rgba(99,184,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                  color: form.fanKey === key ? '#63b8ff' : 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between',
+                }}>
+                  <span>🌀 {label}</span>
+                  <span style={{ fontSize: 10, opacity: 0.6 }}>DHT: {ROOM_LABELS[room]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={labelStyle}>Preset Suhu</div>
+            {tempPresets.length === 0 ? (
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', padding: '8px', background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
+                Belum ada preset. Buat di tab Preset Suhu dulu.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {tempPresets.map(p => {
+                  const room   = FAN_DEVICES.find(f => f.key === form.fanKey)?.room ?? 'kamar'
+                  const thresh = p.threshold?.[room] ?? 30
+                  return (
+                    <button key={p.id} onClick={() => setForm(f => ({ ...f, presetId: p.id }))} style={{
+                      padding: '7px 10px', borderRadius: 8, fontSize: 12, textAlign: 'left',
+                      background: form.presetId === p.id ? 'rgba(239,159,39,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${form.presetId === p.id ? 'rgba(239,159,39,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                      color: form.presetId === p.id ? '#EF9F27' : 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                      display: 'flex', justifyContent: 'space-between',
+                    }}>
+                      <span>🌡 {p.name}</span>
+                      <span style={{ fontSize: 10, opacity: 0.7 }}>&gt;{thresh}°C</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {error && (
+        <div style={{ fontSize: 11, color: '#E24B4A', padding: '4px 6px', background: 'rgba(226,75,74,0.1)', borderRadius: 6 }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={handleSubmit} disabled={loading} style={{
+          flex: 1, padding: '8px',
+          background: isEdit ? 'rgba(99,184,255,0.7)' : 'rgba(29,158,117,0.8)',
+          border: 'none', borderRadius: 8, color: 'white', fontSize: 12, cursor: 'pointer',
+        }}>{loading ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan'}</button>
+        <button onClick={onCancel} style={{
+          padding: '8px 14px', background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+          color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer',
+        }}>Batal</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Tab: Aturan Otomasi ───────────────────────────────────────
+function AutomationTab() {
+  const { automations, tempPresets, timezone, setTimezone, mode } = useHAOStore()
+  const { addAutomation, updateAutomation, deleteAutomation, toggleAutomation } = useAutomation()
+
+  const [showForm, setShowForm] = useState(false)
+  const [editRule, setEditRule] = useState(null) // rule yang sedang di-edit
+
   const fmtTime = (h, m) => `${pad(h)}:${pad(m)}`
   const fmtDays = (days) => {
     if (days === 'semua' || !Array.isArray(days)) return 'Setiap hari'
@@ -126,6 +354,24 @@ function AutomationTab() {
   }
   const getPresetName = (id) => tempPresets.find(p => p.id === id)?.name ?? '?'
   const getFanLabel   = (key) => FAN_DEVICES.find(f => f.key === key)?.label ?? key
+
+  const handleAdd = async (rule) => {
+    const ok = await addAutomation(rule)
+    if (ok) { setShowForm(false) }
+    return ok
+  }
+
+  const handleEdit = async (rule) => {
+    if (!editRule) return false
+    const ok = await updateAutomation(editRule.id, { ...rule, updatedAt: Date.now() })
+    if (ok) { setEditRule(null) }
+    return ok
+  }
+
+  const openEdit = (rule) => {
+    setShowForm(false)
+    setEditRule(rule)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -147,7 +393,7 @@ function AutomationTab() {
 
       {/* Note */}
       <div style={{ padding: '6px 10px', borderRadius: 8, fontSize: 11, background: 'rgba(99,184,255,0.08)', border: '1px solid rgba(99,184,255,0.2)', color: 'rgba(99,184,255,0.8)' }}>
-        ⚡ Prioritas: Waktu &gt; Cahaya &gt; Suhu. Di luar aturan → perangkat OFF.
+        ⚡ Prioritas: Waktu &gt; Cahaya &gt; Suhu. Device tidak termasuk aturan → bisa dikontrol manual.
       </div>
 
       {mode !== 'auto' && (
@@ -164,46 +410,69 @@ function AutomationTab() {
       )}
 
       {automations.map(rule => (
-        <div key={rule.id} style={{
-          padding: '8px 10px',
-          background: rule.enabled !== false ? 'rgba(29,158,117,0.08)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${rule.enabled !== false ? 'rgba(29,158,117,0.25)' : 'rgba(255,255,255,0.08)'}`,
-          borderRadius: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'white', marginBottom: 2 }}>
-                {rule.type === 'time' ? '⏰' : rule.type === 'ldr' ? '☀' : '🌡'} {rule.name}
-              </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
-                {rule.type === 'time' && `${fmtTime(rule.startHour, rule.startMinute)} – ${fmtTime(rule.endHour, rule.endMinute)} · ${fmtDays(rule.days)}`}
-                {rule.type === 'ldr'  && `Cahaya ${rule.condition} · 08:00–17:00`}
-                {rule.type === 'temp' && `${getFanLabel(rule.fanKey)} · Preset: ${getPresetName(rule.presetId)}`}
-              </div>
-              {rule.type !== 'temp' && (
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                  {(rule.devices || []).length} perangkat
+        <div key={rule.id}>
+          {/* Card aturan */}
+          {editRule?.id !== rule.id && (
+            <div style={{
+              padding: '8px 10px',
+              background: rule.enabled !== false ? 'rgba(29,158,117,0.08)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${rule.enabled !== false ? 'rgba(29,158,117,0.25)' : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: 10,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'white', marginBottom: 2 }}>
+                    {rule.type === 'time' ? '⏰' : rule.type === 'ldr' ? '☀' : '🌡'} {rule.name}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
+                    {rule.type === 'time' && `${fmtTime(rule.startHour, rule.startMinute)} – ${fmtTime(rule.endHour, rule.endMinute)} · ${fmtDays(rule.days)}`}
+                    {rule.type === 'ldr'  && `Cahaya ${rule.condition} · 06:00–18:30`}
+                    {rule.type === 'temp' && `${getFanLabel(rule.fanKey)} · Preset: ${getPresetName(rule.presetId)}`}
+                  </div>
+                  {rule.type !== 'temp' && (
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                      {(rule.devices || []).length} perangkat
+                    </div>
+                  )}
                 </div>
-              )}
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 8 }}>
+                  {/* Toggle on/off */}
+                  <button onClick={() => toggleAutomation(rule.id, rule.enabled !== false)} title={rule.enabled !== false ? 'Nonaktifkan' : 'Aktifkan'} style={{
+                    width: 28, height: 28, borderRadius: 7, border: 'none',
+                    background: rule.enabled !== false ? 'rgba(29,158,117,0.3)' : 'rgba(255,255,255,0.08)',
+                    color: rule.enabled !== false ? '#1D9E75' : 'rgba(255,255,255,0.4)',
+                    cursor: 'pointer', fontSize: 13,
+                  }}>{rule.enabled !== false ? '✓' : '○'}</button>
+                  {/* Edit */}
+                  <button onClick={() => openEdit(rule)} title="Edit" style={{
+                    width: 28, height: 28, borderRadius: 7, border: 'none',
+                    background: 'rgba(99,184,255,0.12)', color: '#63b8ff',
+                    cursor: 'pointer', fontSize: 13,
+                  }}>✏️</button>
+                  {/* Delete */}
+                  <button onClick={() => deleteAutomation(rule.id)} title="Hapus" style={{
+                    width: 28, height: 28, borderRadius: 7, border: 'none',
+                    background: 'rgba(226,75,74,0.15)', color: '#E24B4A', cursor: 'pointer', fontSize: 13,
+                  }}>🗑</button>
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 8 }}>
-              <button onClick={() => toggleAutomation(rule.id, rule.enabled !== false)} style={{
-                width: 28, height: 28, borderRadius: 7, border: 'none',
-                background: rule.enabled !== false ? 'rgba(29,158,117,0.3)' : 'rgba(255,255,255,0.08)',
-                color: rule.enabled !== false ? '#1D9E75' : 'rgba(255,255,255,0.4)',
-                cursor: 'pointer', fontSize: 13,
-              }}>{rule.enabled !== false ? '✓' : '○'}</button>
-              <button onClick={() => deleteAutomation(rule.id)} style={{
-                width: 28, height: 28, borderRadius: 7, border: 'none',
-                background: 'rgba(226,75,74,0.15)', color: '#E24B4A', cursor: 'pointer', fontSize: 13,
-              }}>🗑</button>
-            </div>
-          </div>
+          )}
+
+          {/* Form edit inline di bawah card */}
+          {editRule?.id === rule.id && (
+            <AutomationForm
+              editRule={editRule}
+              tempPresets={tempPresets}
+              onSave={handleEdit}
+              onCancel={() => setEditRule(null)}
+            />
+          )}
         </div>
       ))}
 
       {/* Tombol tambah */}
-      {!showForm && (
+      {!showForm && !editRule && (
         <button onClick={() => setShowForm(true)} style={{
           padding: '8px', borderRadius: 10,
           background: 'rgba(29,158,117,0.15)', border: '1px dashed rgba(29,158,117,0.4)',
@@ -211,197 +480,13 @@ function AutomationTab() {
         }}>+ Tambah Aturan</button>
       )}
 
-      {/* Form */}
+      {/* Form tambah baru */}
       {showForm && (
-        <div style={{ padding: '12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-          {/* Tipe */}
-          <div style={{ display: 'flex', gap: 5 }}>
-            {[
-              { t: 'time', label: '⏰ Waktu' },
-              { t: 'ldr',  label: '☀ Cahaya' },
-              { t: 'temp', label: '🌡 Suhu' },
-            ].map(({ t, label }) => (
-              <button key={t} onClick={() => switchType(t)} style={{
-                flex: 1, padding: '6px', borderRadius: 8, fontSize: 11,
-                background: formType === t ? 'rgba(99,184,255,0.2)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${formType === t ? 'rgba(99,184,255,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                color: 'white', cursor: 'pointer',
-              }}>{label}</button>
-            ))}
-          </div>
-
-          {/* Nama */}
-          <div>
-            <div style={labelStyle}>Nama Aturan</div>
-            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="cth: Lampu malam hari" style={inputStyle} />
-          </div>
-
-          {/* Form Waktu */}
-          {formType === 'time' && (
-            <>
-              <div>
-                <div style={labelStyle}>Hari (kosong = setiap hari)</div>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {DAYS.map(({ value, label }) => {
-                    const sel = form.selectedDays.includes(value)
-                    return (
-                      <button key={value} onClick={() => toggleDay(value)} style={{
-                        padding: '4px 8px', borderRadius: 6, fontSize: 11,
-                        background: sel ? 'rgba(29,158,117,0.3)' : 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${sel ? '#1D9E75' : 'rgba(255,255,255,0.1)'}`,
-                        color: sel ? '#1D9E75' : 'rgba(255,255,255,0.5)', cursor: 'pointer',
-                      }}>{label}</button>
-                    )
-                  })}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={labelStyle}>Mulai</div>
-                  <input type="time"
-                    value={`${pad(form.startHour)}:${pad(form.startMinute)}`}
-                    onChange={e => { const [h,m] = e.target.value.split(':').map(Number); setForm(f => ({ ...f, startHour: h, startMinute: m })) }}
-                    style={{ ...inputStyle, colorScheme: 'dark' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={labelStyle}>Selesai</div>
-                  <input type="time"
-                    value={`${pad(form.endHour)}:${pad(form.endMinute)}`}
-                    onChange={e => { const [h,m] = e.target.value.split(':').map(Number); setForm(f => ({ ...f, endHour: h, endMinute: m })) }}
-                    style={{ ...inputStyle, colorScheme: 'dark' }} />
-                </div>
-              </div>
-              <div>
-                <div style={labelStyle}>Perangkat yang Nyala</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                  {[...LAMP_DEVICES, ...FAN_DEVICES.map(f => ({ key: f.key, label: f.label, icon: '🌀' }))].map(({ key, label, icon }) => {
-                    const sel = form.devices?.includes(key)
-                    return (
-                      <button key={key} onClick={() => toggleDevice(key)} style={{
-                        padding: '5px 6px', borderRadius: 7, fontSize: 10,
-                        background: sel ? 'rgba(29,158,117,0.2)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${sel ? '#1D9E75' : 'rgba(255,255,255,0.08)'}`,
-                        color: sel ? '#1D9E75' : 'rgba(255,255,255,0.5)',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                      }}>
-                        <span>{icon}</span><span style={{ fontSize: 9 }}>{label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Form LDR */}
-          {formType === 'ldr' && (
-            <>
-              <div>
-                <div style={labelStyle}>Kondisi Cahaya</div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {['cerah','mendung'].map(c => (
-                    <button key={c} onClick={() => setForm(f => ({ ...f, condition: c }))} style={{
-                      flex: 1, padding: '6px', borderRadius: 8, fontSize: 12,
-                      background: form.condition === c ? 'rgba(239,159,39,0.2)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${form.condition === c ? '#EF9F27' : 'rgba(255,255,255,0.1)'}`,
-                      color: form.condition === c ? '#EF9F27' : 'rgba(255,255,255,0.5)', cursor: 'pointer',
-                    }}>{c === 'cerah' ? '☀ Cerah' : '☁ Mendung'}</button>
-                  ))}
-                </div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Aktif pukul 08:00–17:00</div>
-              </div>
-              <div>
-                <div style={labelStyle}>Lampu yang Nyala</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                  {LAMP_DEVICES.map(({ key, label }) => {
-                    const sel = form.devices?.includes(key)
-                    return (
-                      <button key={key} onClick={() => toggleDevice(key)} style={{
-                        padding: '5px 6px', borderRadius: 7, fontSize: 10,
-                        background: sel ? 'rgba(29,158,117,0.2)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${sel ? '#1D9E75' : 'rgba(255,255,255,0.08)'}`,
-                        color: sel ? '#1D9E75' : 'rgba(255,255,255,0.5)',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                      }}>
-                        <span>💡</span><span style={{ fontSize: 9 }}>{label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Form Suhu */}
-          {formType === 'temp' && (
-            <>
-              <div>
-                <div style={labelStyle}>Kipas</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {FAN_DEVICES.map(({ key, label, room }) => (
-                    <button key={key} onClick={() => setForm(f => ({ ...f, fanKey: key }))} style={{
-                      padding: '7px 10px', borderRadius: 8, fontSize: 12, textAlign: 'left',
-                      background: form.fanKey === key ? 'rgba(99,184,255,0.15)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${form.fanKey === key ? 'rgba(99,184,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                      color: form.fanKey === key ? '#63b8ff' : 'rgba(255,255,255,0.6)', cursor: 'pointer',
-                      display: 'flex', justifyContent: 'space-between',
-                    }}>
-                      <span>🌀 {label}</span>
-                      <span style={{ fontSize: 10, opacity: 0.6 }}>DHT: {ROOM_LABELS[room]}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div style={labelStyle}>Preset Suhu</div>
-                {tempPresets.length === 0 ? (
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', padding: '8px', background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
-                    Belum ada preset. Buat di tab Preset Suhu dulu.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {tempPresets.map(p => {
-                      const room   = FAN_DEVICES.find(f => f.key === form.fanKey)?.room ?? 'kamar'
-                      const thresh = p.threshold?.[room] ?? 30
-                      return (
-                        <button key={p.id} onClick={() => setForm(f => ({ ...f, presetId: p.id }))} style={{
-                          padding: '7px 10px', borderRadius: 8, fontSize: 12, textAlign: 'left',
-                          background: form.presetId === p.id ? 'rgba(239,159,39,0.15)' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${form.presetId === p.id ? 'rgba(239,159,39,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                          color: form.presetId === p.id ? '#EF9F27' : 'rgba(255,255,255,0.6)', cursor: 'pointer',
-                          display: 'flex', justifyContent: 'space-between',
-                        }}>
-                          <span>🌡 {p.name}</span>
-                          <span style={{ fontSize: 10, opacity: 0.7 }}>&gt;{thresh}°C</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {error && (
-            <div style={{ fontSize: 11, color: '#E24B4A', padding: '4px 6px', background: 'rgba(226,75,74,0.1)', borderRadius: 6 }}>
-              {error}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={handleSubmit} disabled={loading} style={{
-              flex: 1, padding: '8px', background: 'rgba(29,158,117,0.8)',
-              border: 'none', borderRadius: 8, color: 'white', fontSize: 12, cursor: 'pointer',
-            }}>{loading ? 'Menyimpan...' : 'Simpan'}</button>
-            <button onClick={() => { setShowForm(false); setError('') }} style={{
-              padding: '8px 14px', background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
-              color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer',
-            }}>Batal</button>
-          </div>
-        </div>
+        <AutomationForm
+          tempPresets={tempPresets}
+          onSave={handleAdd}
+          onCancel={() => setShowForm(false)}
+        />
       )}
     </div>
   )
@@ -410,12 +495,20 @@ function AutomationTab() {
 // ── Tab: Preset Suhu ─────────────────────────────────────────
 function PresetTab() {
   const { tempPresets } = useHAOStore()
-  const { addTempPreset, deleteTempPreset } = useAutomation()
+  const { addTempPreset, deleteTempPreset, updateTempPreset } = useAutomation()
 
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm]         = useState(emptyPresetForm())
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [showForm, setShowForm]   = useState(false)
+  const [editPreset, setEditPreset] = useState(null)
+  const [form, setForm]           = useState(emptyPresetForm())
+  const [error, setError]         = useState('')
+  const [loading, setLoading]     = useState(false)
+
+  const openEdit = (p) => {
+    setShowForm(false)
+    setEditPreset(p)
+    setForm({ name: p.name, threshold: { ...p.threshold } })
+    setError('')
+  }
 
   const handleSubmit = async () => {
     if (!form.name.trim()) { setError('Nama preset wajib diisi'); return }
@@ -424,11 +517,72 @@ function PresetTab() {
       setError('Threshold harus antara 10–50°C'); return
     }
     setError(''); setLoading(true)
-    const ok = await addTempPreset({ name: form.name.trim(), threshold: thresh })
+
+    let ok
+    if (editPreset) {
+      ok = await updateTempPreset(editPreset.id, { name: form.name.trim(), threshold: thresh, updatedAt: Date.now() })
+      if (ok) setEditPreset(null)
+    } else {
+      ok = await addTempPreset({ name: form.name.trim(), threshold: thresh })
+      if (ok) { setShowForm(false); setForm(emptyPresetForm()) }
+    }
+
     setLoading(false)
-    if (ok) { setShowForm(false); setForm(emptyPresetForm()) }
-    else setError('Gagal menyimpan preset')
+    if (!ok) setError('Gagal menyimpan preset')
   }
+
+  const cancelEdit = () => {
+    setEditPreset(null)
+    setForm(emptyPresetForm())
+    setError('')
+  }
+
+  const PresetForm = ({ isEdit }) => (
+    <div style={{ padding: '12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${isEdit ? 'rgba(99,184,255,0.3)' : 'rgba(255,255,255,0.1)'}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {isEdit && <div style={{ fontSize: 11, color: 'rgba(99,184,255,0.8)', marginBottom: -2 }}>✏️ Edit Preset</div>}
+      <div>
+        <div style={labelStyle}>Nama Preset</div>
+        <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          placeholder="cth: Panas Kamar" style={inputStyle} />
+      </div>
+      {['ruangtamu','kamar','dapur'].map(room => (
+        <div key={room}>
+          <div style={labelStyle}>Threshold {ROOM_LABELS[room]} (°C)</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="range" min="10" max="50"
+              value={form.threshold[room]}
+              onChange={e => setForm(f => ({
+                ...f,
+                threshold: { ...f.threshold, [room]: Number(e.target.value) }
+              }))}
+              style={{ flex: 1, accentColor: '#EF9F27' }}
+            />
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#EF9F27', minWidth: 42, fontFamily: 'sans-serif' }}>
+              &gt;{form.threshold[room]}°C
+            </span>
+          </div>
+        </div>
+      ))}
+      {error && (
+        <div style={{ fontSize: 11, color: '#E24B4A', padding: '4px 6px', background: 'rgba(226,75,74,0.1)', borderRadius: 6 }}>
+          {error}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={handleSubmit} disabled={loading} style={{
+          flex: 1, padding: '8px',
+          background: isEdit ? 'rgba(99,184,255,0.7)' : 'rgba(239,159,39,0.7)',
+          border: 'none', borderRadius: 8, color: 'white', fontSize: 12, cursor: 'pointer',
+        }}>{loading ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan'}</button>
+        <button onClick={isEdit ? cancelEdit : () => { setShowForm(false); setError('') }} style={{
+          padding: '8px 14px', background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+          color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer',
+        }}>Batal</button>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -440,40 +594,52 @@ function PresetTab() {
       )}
 
       {tempPresets.map(p => (
-        <div key={p.id} style={{
-          padding: '8px 10px',
-          background: 'rgba(239,159,39,0.08)',
-          border: '1px solid rgba(239,159,39,0.2)',
-          borderRadius: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'white', marginBottom: 4 }}>
-                🌡 {p.name}
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {Object.entries(p.threshold || {}).map(([room, val]) => (
-                  <span key={room} style={{
-                    fontSize: 10, padding: '2px 7px', borderRadius: 12,
-                    background: 'rgba(239,159,39,0.15)',
-                    border: '1px solid rgba(239,159,39,0.25)',
-                    color: '#EF9F27',
-                  }}>
-                    {ROOM_LABELS[room] ?? room}: &gt;{val}°C
-                  </span>
-                ))}
+        <div key={p.id}>
+          {editPreset?.id !== p.id && (
+            <div style={{
+              padding: '8px 10px',
+              background: 'rgba(239,159,39,0.08)',
+              border: '1px solid rgba(239,159,39,0.2)',
+              borderRadius: 10,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'white', marginBottom: 4 }}>
+                    🌡 {p.name}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {Object.entries(p.threshold || {}).map(([room, val]) => (
+                      <span key={room} style={{
+                        fontSize: 10, padding: '2px 7px', borderRadius: 12,
+                        background: 'rgba(239,159,39,0.15)',
+                        border: '1px solid rgba(239,159,39,0.25)',
+                        color: '#EF9F27',
+                      }}>
+                        {ROOM_LABELS[room] ?? room}: &gt;{val}°C
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 8 }}>
+                  <button onClick={() => openEdit(p)} title="Edit" style={{
+                    width: 28, height: 28, borderRadius: 7, border: 'none',
+                    background: 'rgba(99,184,255,0.12)', color: '#63b8ff',
+                    cursor: 'pointer', fontSize: 13,
+                  }}>✏️</button>
+                  <button onClick={() => deleteTempPreset(p.id)} title="Hapus" style={{
+                    width: 28, height: 28, borderRadius: 7, border: 'none',
+                    background: 'rgba(226,75,74,0.15)', color: '#E24B4A',
+                    cursor: 'pointer', fontSize: 13, flexShrink: 0,
+                  }}>🗑</button>
+                </div>
               </div>
             </div>
-            <button onClick={() => deleteTempPreset(p.id)} style={{
-              width: 28, height: 28, borderRadius: 7, border: 'none',
-              background: 'rgba(226,75,74,0.15)', color: '#E24B4A',
-              cursor: 'pointer', fontSize: 13, flexShrink: 0,
-            }}>🗑</button>
-          </div>
+          )}
+          {editPreset?.id === p.id && <PresetForm isEdit />}
         </div>
       ))}
 
-      {!showForm && (
+      {!showForm && !editPreset && (
         <button onClick={() => setShowForm(true)} style={{
           padding: '8px', borderRadius: 10,
           background: 'rgba(239,159,39,0.12)', border: '1px dashed rgba(239,159,39,0.4)',
@@ -481,65 +647,17 @@ function PresetTab() {
         }}>+ Tambah Preset Suhu</button>
       )}
 
-      {showForm && (
-        <div style={{ padding: '12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div>
-            <div style={labelStyle}>Nama Preset</div>
-            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="cth: Panas Kamar" style={inputStyle} />
-          </div>
-
-          {/* Threshold per ruangan */}
-          {['ruangtamu','kamar','dapur'].map(room => (
-            <div key={room}>
-              <div style={labelStyle}>Threshold {ROOM_LABELS[room]} (°C)</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="range" min="10" max="50"
-                  value={form.threshold[room]}
-                  onChange={e => setForm(f => ({
-                    ...f,
-                    threshold: { ...f.threshold, [room]: Number(e.target.value) }
-                  }))}
-                  style={{ flex: 1, accentColor: '#EF9F27' }}
-                />
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#EF9F27', minWidth: 42, fontFamily: 'sans-serif' }}>
-                  &gt;{form.threshold[room]}°C
-                </span>
-              </div>
-            </div>
-          ))}
-
-          {error && (
-            <div style={{ fontSize: 11, color: '#E24B4A', padding: '4px 6px', background: 'rgba(226,75,74,0.1)', borderRadius: 6 }}>
-              {error}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={handleSubmit} disabled={loading} style={{
-              flex: 1, padding: '8px', background: 'rgba(239,159,39,0.7)',
-              border: 'none', borderRadius: 8, color: 'white', fontSize: 12, cursor: 'pointer',
-            }}>{loading ? 'Menyimpan...' : 'Simpan'}</button>
-            <button onClick={() => { setShowForm(false); setError('') }} style={{
-              padding: '8px 14px', background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
-              color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer',
-            }}>Batal</button>
-          </div>
-        </div>
-      )}
+      {showForm && <PresetForm isEdit={false} />}
     </div>
   )
 }
 
 // ── Main export ───────────────────────────────────────────────
 export function AutomationPanel() {
-  const [tab, setTab] = useState('rules') // 'rules' | 'presets'
+  const [tab, setTab] = useState('rules')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'sans-serif' }}>
-      {/* Tab switcher */}
       <div style={{ display: 'flex', gap: 5, background: 'rgba(255,255,255,0.04)', borderRadius: 9, padding: 3 }}>
         {[
           { id: 'rules',   label: '⚡ Aturan' },

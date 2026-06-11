@@ -34,9 +34,10 @@ function evaluateRule(rule, now, ldr) {
       return true
     }
     if (rule.type === 'ldr') {
-      if (now.totalMinutes < 480 || now.totalMinutes >= 1020) return false
-      if (rule.condition === 'cerah'   && ldr <= 600) return false
-      if (rule.condition === 'mendung' && ldr >  600) return false
+      if (now.totalMinutes < 360 || now.totalMinutes >= 1110) return false
+      // ldr >= 500 = terang, ldr < 500 = gelap
+      if (rule.condition === 'cerah'   && ldr <  500) return false
+      if (rule.condition === 'mendung' && ldr >= 500) return false
       return true
     }
     return false
@@ -64,7 +65,9 @@ export function useAutomation() {
     timezone, setDevices,
   } = useHAOStore()
 
-  const lastStateRef = useRef({})
+  const lastStateRef        = useRef({})
+  // Set device keys yang sedang di-manage oleh automation aktif
+  const managedDevicesRef   = useRef(new Set())
 
   // Subscribe automations dari Firebase
   useEffect(() => {
@@ -90,42 +93,49 @@ export function useAutomation() {
 
   // Evaluasi aturan tiap 30 detik
   useEffect(() => {
-    if (mode !== 'auto') return
+    if (mode !== 'auto') {
+      // Reset managed devices saat keluar auto mode
+      managedDevicesRef.current = new Set()
+      return
+    }
 
     const evaluate = () => {
       try {
         const now = getNowInTZ(timezone)
         const targetDevices = {}
+        const managed = new Set()
 
-        // 1. Aturan waktu (prioritas tertinggi untuk lampu & kipas)
+        // 1. Aturan waktu
         automations
           .filter(r => r.type === 'time' && r.enabled !== false)
           .forEach(rule => {
             if (!evaluateRule(rule, now, sensor.ldr)) return
-            ;(rule.devices || []).forEach(d => { targetDevices[d] = 'ON' })
+            ;(rule.devices || []).forEach(d => {
+              targetDevices[d] = 'ON'
+              managed.add(d)
+            })
           })
 
-        // 2. Aturan LDR (hanya lampu, tidak override waktu)
-        // 2. Aturan LDR — eksplisit ON/OFF agar lampu bisa mati saat terang
+        // 2. Aturan LDR — eksplisit ON/OFF agar bisa mati saat terang
         automations
           .filter(r => r.type === 'ldr' && r.enabled !== false)
           .forEach(rule => {
             const active = evaluateRule(rule, now, sensor.ldr)
             ;(rule.devices || []).forEach(d => {
+              managed.add(d)
               if (targetDevices[d] === undefined) {
                 targetDevices[d] = active ? 'ON' : 'OFF'
               }
             })
           })
 
-        // 3. Aturan kipas suhu (terus menerus, tidak override waktu)
+        // 3. Aturan kipas suhu
         automations
           .filter(r => r.type === 'temp' && r.enabled !== false)
           .forEach(rule => {
-            // rule.fanKey = 'fan_kamar' | 'fan_ruangtamu' | 'fan_dapur'
-            // rule.presetId = id preset suhu
             if (!rule.fanKey || !rule.presetId) return
-            if (targetDevices[rule.fanKey] !== undefined) return // sudah di-set aturan waktu
+            managed.add(rule.fanKey)
+            if (targetDevices[rule.fanKey] !== undefined) return
 
             const preset = tempPresets.find(p => p.id === rule.presetId)
             if (!preset) return
@@ -137,22 +147,30 @@ export function useAutomation() {
             targetDevices[rule.fanKey] = suhuNow >= thresh ? 'ON' : 'OFF'
           })
 
-        // 4. Semua device yang tidak masuk aturan → OFF
-        ALL_DEVICES.forEach(d => {
+        // 4. Device yang masuk automation tapi tidak aktif → OFF
+        managed.forEach(d => {
           if (targetDevices[d] === undefined) targetDevices[d] = 'OFF'
         })
 
-        // Cek ada perubahan
-        const hasChange = ALL_DEVICES.some(d => lastStateRef.current[d] !== targetDevices[d])
+        // Simpan set device yang di-manage
+        managedDevicesRef.current = managed
+
+        // Cek ada perubahan (hanya device yang di-manage)
+        const hasChange = [...managed].some(d => lastStateRef.current[d] !== targetDevices[d])
         if (!hasChange) return
-        lastStateRef.current = { ...targetDevices }
+        lastStateRef.current = { ...lastStateRef.current, ...targetDevices }
 
-        setDevices(targetDevices)
+        // Update hanya managed devices di store
+        setDevices(prev => ({ ...prev, ...targetDevices }))
 
-        set(ref(db, 'hao/status'), { ...targetDevices, updatedAt: Date.now() })
+        // Simpan ke Firebase hanya managed devices
+        const firebaseUpdate = {}
+        managed.forEach(d => { firebaseUpdate[d] = targetDevices[d] })
+        firebaseUpdate.updatedAt = Date.now()
+        set(ref(db, 'hao/status'), { ...firebaseUpdate })
           .catch(err => console.warn('[Automation] Firebase:', err.message))
 
-        ALL_DEVICES.forEach(d => {
+        managed.forEach(d => {
           try { publishCommand(d, targetDevices[d]) } catch {}
         })
 
@@ -165,6 +183,9 @@ export function useAutomation() {
     const interval = setInterval(evaluate, 30000)
     return () => clearInterval(interval)
   }, [mode, automations, tempPresets, sensor.ldr, sensorRuangan, timezone])
+
+  // Kembalikan set device yang sedang di-manage automation (untuk cek manual override)
+  const getManagedDevices = () => managedDevicesRef.current
 
   // ── CRUD Automations ─────────────────────────────────────────
   const addAutomation = async (rule) => {
@@ -216,5 +237,6 @@ export function useAutomation() {
   return {
     addAutomation, updateAutomation, deleteAutomation, toggleAutomation,
     addTempPreset, deleteTempPreset, updateTempPreset,
+    getManagedDevices,
   }
 }
