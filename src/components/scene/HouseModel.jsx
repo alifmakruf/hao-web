@@ -109,9 +109,9 @@ export function HouseModel({ onReady }) {
   // Warna & label gas
   const gasVal = sensor.gas ?? 0
   const gasStyle = {
-    color: gasVal > 800 ? '#E24B4A' : gasVal > 400 ? '#EF9F27' : '#1D9E75',
-    bg:    gasVal > 800 ? 'rgba(226,75,74,0.88)' : gasVal > 400 ? 'rgba(239,159,39,0.88)' : 'rgba(29,158,117,0.88)',
-    label: gasVal > 800 ? '☠ Bahaya!' : gasVal > 400 ? '⚠ Waspada' : '✓ Aman',
+    color: gasVal > 100 ? '#E24B4A' : gasVal > 40 ? '#EF9F27' : '#1D9E75',
+    bg:    gasVal > 100 ? 'rgba(226,75,74,0.88)' : gasVal > 40 ? 'rgba(239,159,39,0.88)' : 'rgba(29,158,117,0.88)',
+    label: gasVal > 100 ? '☠ Bahaya!' : gasVal > 40 ? '⚠ Waspada' : '✓ Aman',
   }
 
   return (
