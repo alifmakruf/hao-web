@@ -516,20 +516,29 @@ export default function App() {
 
             {/* Auth role banner */}
             {authRole === 'viewer' && (
-              <div style={{ margin: '8px 16px 0', padding: '7px 10px', borderRadius: 9, background: 'rgba(255,200,80,0.08)', border: '1px solid rgba(255,200,80,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ margin: '12px 16px 0', padding: '7px 10px', borderRadius: 9, background: 'rgba(255,200,80,0.08)', border: '1px solid rgba(255,200,80,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 13 }}>👁</span>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,200,80,0.9)' }}>View Only</div>
-                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>Login untuk mengontrol</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>Login / pakai token untuk kontrol</div>
                 </div>
               </div>
             )}
             {authRole === 'guest' && (
-              <div style={{ margin: '8px 16px 0', padding: '7px 10px', borderRadius: 9, background: 'rgba(99,184,255,0.08)', border: '1px solid rgba(99,184,255,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ margin: '12px 16px 0', padding: '7px 10px', borderRadius: 9, background: 'rgba(99,184,255,0.08)', border: '1px solid rgba(99,184,255,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 13 }}>👥</span>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(99,184,255,0.9)' }}>Guest</div>
                   <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>Akses kontrol aktif</div>
+                </div>
+              </div>
+            )}
+            {authRole === 'admin' && (
+              <div style={{ margin: '12px 16px 0', padding: '7px 10px', borderRadius: 9, background: 'rgba(29,158,117,0.08)', border: '1px solid rgba(29,158,117,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13 }}>🔑</span>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(29,158,117,0.9)' }}>Admin</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>Akses penuh</div>
                 </div>
               </div>
             )}
@@ -542,28 +551,48 @@ export default function App() {
               <SensorPanel />
             </div>
 
-            {/* Mode */}
-            <div style={{ padding: '16px 16px 0' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-                Mode Sistem
-              </div>
-              <ModeSelector />
-            </div>
+            {/* Mode, Automation, Device — disabled overlay kalau viewer */}
+            <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {authRole === 'viewer' && (
+                <div style={{
+                  position: 'absolute', inset: 0, zIndex: 10,
+                  background: 'rgba(0,0,0,0.45)',
+                  backdropFilter: 'blur(2px)',
+                  borderRadius: 0,
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: 8,
+                  cursor: 'not-allowed',
+                }}>
+                  <span style={{ fontSize: 28 }}>🔒</span>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'sans-serif', textAlign: 'center', padding: '0 24px' }}>
+                    Login atau masukkan token guest untuk mengontrol perangkat
+                  </span>
+                </div>
+              )}
 
-            {/* Automation */}
-            <div style={{ padding: '16px 16px 0' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-                Otomasi
+              {/* Mode */}
+              <div style={{ padding: '16px 16px 0' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Mode Sistem
+                </div>
+                <ModeSelector />
               </div>
-              <AutomationPanel />
-            </div>
 
-            {/* Device */}
-            <div style={{ padding: '16px 16px 16px', flex: 1 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-                Perangkat
+              {/* Automation */}
+              <div style={{ padding: '16px 16px 0' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Otomasi
+                </div>
+                <AutomationPanel />
               </div>
-              <DeviceCard />
+
+              {/* Device */}
+              <div style={{ padding: '16px 16px 16px', flex: 1 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Perangkat
+                </div>
+                <DeviceCard />
+              </div>
             </div>
           </div>
         </div>
@@ -605,93 +634,6 @@ export default function App() {
           position: 'absolute', top: 16, right: 16,
           zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center',
         }}>
-          {/* ── Auth / Guest / Token icon buttons ── */}
-          {/* Login admin */}
-          <div ref={authRef} style={{ position: 'relative' }}>
-            <IconButton
-              onClick={() => { setShowAuth(v => !v); setShowGuest(false); setShowToken(false) }}
-              title={authRole === 'admin' ? 'Admin (Login)' : 'Login Admin'}
-              active={showAuth || authRole === 'admin'}
-            >
-              <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
-                <circle cx="8.5" cy="5.5" r="3" stroke="white" strokeWidth="1.5"/>
-                <path d="M2 15c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </IconButton>
-            {showAuth && (
-              <div style={{
-                position: 'absolute', top: 46, right: 0, width: 240,
-                background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14,
-                padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  Admin Login
-                </div>
-                <AuthPanel onClose={() => setShowAuth(false)} />
-              </div>
-            )}
-          </div>
-
-          {/* Guest token */}
-          <div ref={guestRef} style={{ position: 'relative' }}>
-            <IconButton
-              onClick={() => { setShowGuest(v => !v); setShowAuth(false); setShowToken(false) }}
-              title={authRole === 'guest' ? 'Guest (Aktif)' : 'Login Guest'}
-              active={showGuest || authRole === 'guest'}
-            >
-              <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
-                <circle cx="6" cy="5.5" r="2.5" stroke="white" strokeWidth="1.4"/>
-                <path d="M1 14.5c0-2.76 2.24-5 5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
-                <circle cx="12" cy="5.5" r="2.5" stroke="white" strokeWidth="1.4" opacity="0.6"/>
-                <path d="M11 9.5c2.76 0 5 2.24 5 5" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity="0.6"/>
-              </svg>
-            </IconButton>
-            {showGuest && (
-              <div style={{
-                position: 'absolute', top: 46, right: 0, width: 240,
-                background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14,
-                padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  Guest
-                </div>
-                <GuestPanel onClose={() => setShowGuest(false)} />
-              </div>
-            )}
-          </div>
-
-          {/* Create Token — admin only */}
-          {authRole === 'admin' && (
-            <div ref={tokenRef} style={{ position: 'relative' }}>
-              <IconButton
-                onClick={() => { setShowToken(v => !v); setShowAuth(false); setShowGuest(false) }}
-                title="Create Token"
-                active={showToken}
-              >
-                <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
-                  <rect x="2" y="7" width="13" height="8" rx="2" stroke="white" strokeWidth="1.4"/>
-                  <path d="M5.5 7V5a3 3 0 016 0v2" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
-                  <circle cx="8.5" cy="11" r="1.2" fill="white"/>
-                </svg>
-              </IconButton>
-              {showToken && (
-                <div style={{
-                  position: 'absolute', top: 46, right: 0, width: 260,
-                  background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(255,200,80,0.2)', borderRadius: 14,
-                  padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-                    Create Token
-                  </div>
-                  <TokenPanel onClose={() => setShowToken(false)} />
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Lite Mode — ditambahkan sebelum Weather */}
           <IconButton
             onClick={() => setLiteMode(!liteMode)}
@@ -740,6 +682,137 @@ export default function App() {
 
         {/* ── Status koneksi Firebase + MQTT ── */}
         <ConnectionStatus />
+
+        {/* ── Auth Panel kanan (di atas TaskPanel) ── */}
+        <div style={{
+          position: 'absolute', bottom: 116, right: 16,
+          zIndex: 99998,
+          display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end',
+        }}>
+          {/* Token button — admin only */}
+          {authRole === 'admin' && (
+            <div ref={tokenRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => { setShowToken(v => !v); setShowAuth(false); setShowGuest(false) }}
+                title="Create Token Guest"
+                style={{
+                  width: 46, height: 46, borderRadius: 14,
+                  background: showToken ? 'rgba(255,200,80,0.25)' : 'rgba(8,12,24,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  border: `1px solid ${showToken ? 'rgba(255,200,80,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                  color: showToken ? '#ffc850' : 'rgba(255,255,255,0.7)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 17 17" fill="none">
+                  <rect x="2" y="7" width="13" height="8" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M5.5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <circle cx="8.5" cy="11" r="1.2" fill="currentColor"/>
+                </svg>
+              </button>
+              {showToken && (
+                <div style={{
+                  position: 'absolute', bottom: 52, right: 0, width: 260,
+                  background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255,200,80,0.2)', borderRadius: 14,
+                  padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                    Create Token
+                  </div>
+                  <TokenPanel onClose={() => setShowToken(false)} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Guest button */}
+          <div ref={guestRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setShowGuest(v => !v); setShowAuth(false); setShowToken(false) }}
+              title={authRole === 'guest' ? 'Guest (aktif) — klik untuk logout' : 'Login sebagai Guest'}
+              style={{
+                width: 46, height: 46, borderRadius: 14,
+                background: (showGuest || authRole === 'guest') ? 'rgba(99,184,255,0.2)' : 'rgba(8,12,24,0.9)',
+                backdropFilter: 'blur(10px)',
+                border: `1px solid ${(showGuest || authRole === 'guest') ? 'rgba(99,184,255,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                color: (showGuest || authRole === 'guest') ? '#63b8ff' : 'rgba(255,255,255,0.7)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s', position: 'relative',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 17 17" fill="none">
+                <circle cx="6" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M1 14.5c0-2.76 2.24-5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="12" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+                <path d="M11 9.5c2.76 0 5 2.24 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+              </svg>
+              {authRole === 'guest' && (
+                <span style={{
+                  position: 'absolute', top: 6, right: 6,
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: '#63b8ff', boxShadow: '0 0 5px #63b8ff',
+                }} />
+              )}
+            </button>
+            {showGuest && (
+              <div style={{
+                position: 'absolute', bottom: 52, right: 0, width: 240,
+                background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14,
+                padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Guest Login
+                </div>
+                <GuestPanel onClose={() => setShowGuest(false)} />
+              </div>
+            )}
+          </div>
+
+          {/* Admin Login button */}
+          <div ref={authRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setShowAuth(v => !v); setShowGuest(false); setShowToken(false) }}
+              title={authRole === 'admin' ? 'Admin (aktif) — klik untuk logout' : 'Login Admin'}
+              style={{
+                width: 46, height: 46, borderRadius: 14,
+                background: (showAuth || authRole === 'admin') ? 'rgba(29,158,117,0.25)' : 'rgba(8,12,24,0.9)',
+                backdropFilter: 'blur(10px)',
+                border: `1px solid ${(showAuth || authRole === 'admin') ? 'rgba(29,158,117,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                color: (showAuth || authRole === 'admin') ? '#1D9E75' : 'rgba(255,255,255,0.7)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s', position: 'relative',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 17 17" fill="none">
+                <circle cx="8.5" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.6"/>
+                <path d="M2 15c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+              {authRole === 'admin' && (
+                <span style={{
+                  position: 'absolute', top: 6, right: 6,
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: '#1D9E75', boxShadow: '0 0 5px #1D9E75',
+                }} />
+              )}
+            </button>
+            {showAuth && (
+              <div style={{
+                position: 'absolute', bottom: 52, right: 0, width: 240,
+                background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14,
+                padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Admin Login
+                </div>
+                <AuthPanel onClose={() => setShowAuth(false)} />
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Burger button pojok kanan bawah */}
         <button

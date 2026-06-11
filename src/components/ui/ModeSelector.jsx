@@ -20,14 +20,15 @@ export function ModeSelector() {
             key={id}
             onClick={() => canControl && changeMode(id)}
             disabled={!canControl}
-            style={{ cursor: canControl ? 'pointer' : 'not-allowed', opacity: (!canControl && !isActive) ? 0.5 : 1 }}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '8px 12px',
               background: isActive ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
               border: `1px solid ${isActive ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
               borderRadius: 10, color: 'white',
-              cursor: 'pointer', textAlign: 'left',
+              cursor: canControl ? 'pointer' : 'not-allowed',
+              opacity: (!canControl && !isActive) ? 0.45 : 1,
+              textAlign: 'left',
               transition: 'all 0.2s', fontFamily: 'sans-serif',
             }}
           >

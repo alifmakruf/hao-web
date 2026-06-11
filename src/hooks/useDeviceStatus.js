@@ -11,6 +11,9 @@ const DEVICE_KEYS = [
   'fan_ruangtamu', 'fan_kamar', 'fan_dapur',
 ]
 
+// Pelacak key yang sedang "in-flight" (optimistic update belum confirmed Firebase)
+const pendingKeys = new Set()
+
 export function useDeviceStatus() {
   const {
     setDevices, setSensor, setSensorRuangan,
@@ -30,6 +33,8 @@ export function useDeviceStatus() {
         const data = snap.val()
         const devices = {}
         DEVICE_KEYS.forEach((key) => {
+          // Skip key yang masih pending optimistic update — hindari flicker
+          if (pendingKeys.has(key)) return
           if (data[key] !== undefined) devices[key] = data[key]
         })
         if (Object.keys(devices).length > 0)
@@ -87,25 +92,36 @@ export function useDeviceStatus() {
       return
     }
     const newState = state.devices?.[deviceKey] === 'ON' ? 'OFF' : 'ON'
+    const isAdmin = state.authRole === 'admin'
 
-    // 1. Update UI langsung (optimistic) — tidak tunggu network
+    // 1. Tandai key sebagai pending — Firebase onValue tidak akan override state ini
+    pendingKeys.add(deviceKey)
+
+    // 2. Update UI langsung (optimistic)
     toggleDeviceLocal(deviceKey)
 
-    // 2. Publish MQTT langsung ke ESP — ini yang paling cepat
-    //    Kalau MQTT sedang reconnect, command masuk antrian di useMQTT
+    // 3. Publish MQTT langsung ke ESP
     const mqttSent = publishCommand(deviceKey, newState)
     if (!mqttSent) {
-      console.warn(`[HAO] MQTT tidak connect — ${deviceKey} masuk antrian, Firebase tetap diupdate`)
+      console.warn(`[HAO] MQTT tidak connect — ${deviceKey} masuk antrian`)
     }
 
-    // 3. Update Firebase (untuk sync state & n8n) — async, tidak block UI
-    try {
-      await set(ref(db, `hao/status/${deviceKey}`), newState)
-    } catch (err) {
-      console.warn('[Firebase] Gagal update:', err.message)
-      // Rollback UI kalau Firebase juga gagal dan MQTT juga gagal
-      if (!mqttSent) toggleDeviceLocal(deviceKey)
+    // 4. Update Firebase — hanya kalau admin (guest tidak punya write permission ke status)
+    if (isAdmin) {
+      try {
+        await set(ref(db, `hao/status/${deviceKey}`), newState)
+      } catch (err) {
+        console.warn('[Firebase] Gagal update:', err.message)
+        // Rollback kalau Firebase gagal dan MQTT juga gagal
+        if (!mqttSent) toggleDeviceLocal(deviceKey)
+      }
     }
+
+    // 5. Hapus dari pending setelah delay singkat — biarkan Firebase sync selesai
+    //    Untuk guest, lebih lama karena Firebase tidak diupdate (ESP yang update balik)
+    setTimeout(() => {
+      pendingKeys.delete(deviceKey)
+    }, isAdmin ? 1500 : 3000)
   }
 
   const changeMode = async (newMode) => {

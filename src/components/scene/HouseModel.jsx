@@ -43,7 +43,7 @@ const GAS_POS = [-0.236, 0.62, -0.465]
 
 export function HouseModel({ onReady }) {
   const { scene } = useGLTF('/untitled4444.glb')
-  const { devices, mode, notifs, sensor, sensorRuangan } = useHAOStore()
+  const { devices, mode, notifs, sensor, sensorRuangan, authRole } = useHAOStore()
   const { toggleDevice } = useDeviceStatus()
   const originalMaterials = useRef({})
 
@@ -80,15 +80,18 @@ export function HouseModel({ onReady }) {
     })
   }, [devices, scene])
 
+  // Hanya admin dan guest (yang sudah login/pakai token) yang boleh toggle device
+  const canInteract = authRole === 'admin' || authRole === 'guest'
+
   const handleMeshClick = (e) => {
     e.stopPropagation()
     const deviceKey = DEVICE_MESH_MAP[e.object.name]
-    if (!deviceKey || mode !== 'manual') return
+    if (!deviceKey || mode !== 'manual' || !canInteract) return
     toggleDevice(deviceKey)
   }
 
   const handlePointerOver = (e) => {
-    if (DEVICE_MESH_MAP[e.object.name] && mode === 'manual')
+    if (DEVICE_MESH_MAP[e.object.name] && mode === 'manual' && canInteract)
       document.body.style.cursor = 'pointer'
   }
   const handlePointerOut = () => {

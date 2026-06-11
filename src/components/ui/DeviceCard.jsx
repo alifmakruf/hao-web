@@ -25,89 +25,93 @@ export function DeviceCard() {
   const { devices, mode, setDevices, authRole } = useHAOStore()
   const { toggleDevice } = useDeviceStatus()
   const isManual = mode === 'manual'
+
+  // BUG FIX 1: canControl harus dipakai di semua disabled/onClick
+  // BUG FIX 2: viewer tidak boleh interaksi sama sekali (bukan hanya disabled visual)
   const canControl = authRole === 'admin' || authRole === 'guest'
 
-  // Cek apakah semua lampu ON
+  // Tombol bisa diklik hanya jika: bisa kontrol DAN mode manual
+  const canClick = canControl && isManual
+
   const allLampsOn = LAMP_KEYS.every(k => devices[k] === 'ON')
   const allFansOn  = FAN_KEYS.every(k => devices[k] === 'ON')
 
   const toggleAllLamps = async () => {
-    if (!isManual) return
+    if (!canClick) return
     const newState = allLampsOn ? 'OFF' : 'ON'
     try {
-      // Update lokal
       const updates = {}
       LAMP_KEYS.forEach(k => { updates[k] = newState })
       setDevices(prev => ({ ...prev, ...updates }))
-
-      // Firebase
-      const fbUpdates = {}
-      LAMP_KEYS.forEach(k => { fbUpdates[`hao/status/${k}`] = newState })
-      await Promise.all(
-        LAMP_KEYS.map(k => set(ref(db, `hao/status/${k}`), newState))
-      )
-
-      // MQTT
-      LAMP_KEYS.forEach(k => {
-        try { publishCommand(k, newState) } catch {}
-      })
+      await Promise.all(LAMP_KEYS.map(k => set(ref(db, `hao/status/${k}`), newState)))
+      LAMP_KEYS.forEach(k => { try { publishCommand(k, newState) } catch {} })
     } catch (err) {
       console.warn('[DeviceCard] Gagal toggle all lamps:', err.message)
     }
   }
 
   const toggleAllFans = async () => {
-    if (!isManual) return
+    if (!canClick) return
     const newState = allFansOn ? 'OFF' : 'ON'
     try {
       const updates = {}
       FAN_KEYS.forEach(k => { updates[k] = newState })
       setDevices(prev => ({ ...prev, ...updates }))
-
-      await Promise.all(
-        FAN_KEYS.map(k => set(ref(db, `hao/status/${k}`), newState))
-      )
-
-      FAN_KEYS.forEach(k => {
-        try { publishCommand(k, newState) } catch {}
-      })
+      await Promise.all(FAN_KEYS.map(k => set(ref(db, `hao/status/${k}`), newState)))
+      FAN_KEYS.forEach(k => { try { publishCommand(k, newState) } catch {} })
     } catch (err) {
       console.warn('[DeviceCard] Gagal toggle all fans:', err.message)
     }
   }
 
+  // Banner info sesuai kondisi
+  const getBanner = () => {
+    if (!canControl) return {
+      text: 'Login untuk mengontrol perangkat',
+      color: 'rgba(255,200,80,0.8)',
+      bg: 'rgba(255,200,80,0.08)',
+      border: 'rgba(255,200,80,0.2)',
+    }
+    if (!isManual) return {
+      text: 'Switch ke mode Manual untuk kontrol manual',
+      color: 'rgba(255,200,80,0.8)',
+      bg: 'rgba(255,200,80,0.1)',
+      border: 'rgba(255,200,80,0.2)',
+    }
+    return null
+  }
+
+  const banner = getBanner()
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-      {!isManual && (
+      {banner && (
         <div style={{
-          fontSize: 11, color: 'rgba(255,200,80,0.8)',
+          fontSize: 11, color: banner.color,
           fontFamily: 'sans-serif', padding: '6px 8px',
-          background: 'rgba(255,200,80,0.1)', borderRadius: 8,
-          border: '1px solid rgba(255,200,80,0.2)',
+          background: banner.bg, borderRadius: 8,
+          border: `1px solid ${banner.border}`,
         }}>
-          Switch ke mode Manual untuk kontrol manual
+          {banner.text}
         </div>
       )}
 
-      {/* Tombol select all lampu */}
+      {/* Tombol select all */}
       <div style={{ display: 'flex', gap: 6 }}>
         <button
           onClick={toggleAllLamps}
-          disabled={!isManual}
+          disabled={!canClick}
           style={{
             flex: 1, padding: '7px 6px',
-            background: allLampsOn
-              ? 'rgba(255,220,100,0.2)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${allLampsOn
-              ? 'rgba(255,200,80,0.5)' : 'rgba(255,255,255,0.1)'}`,
+            background: allLampsOn ? 'rgba(255,220,100,0.2)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${allLampsOn ? 'rgba(255,200,80,0.5)' : 'rgba(255,255,255,0.1)'}`,
             borderRadius: 8, color: 'white',
             fontSize: 11, fontFamily: 'sans-serif',
-            cursor: isManual ? 'pointer' : 'not-allowed',
-            opacity: isManual ? 1 : 0.5,
+            cursor: canClick ? 'pointer' : 'not-allowed',
+            opacity: canClick ? 1 : 0.4,
             transition: 'all 0.2s',
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'center', gap: 4,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           }}
         >
           <span>💡</span>
@@ -116,20 +120,17 @@ export function DeviceCard() {
 
         <button
           onClick={toggleAllFans}
-          disabled={!isManual}
+          disabled={!canClick}
           style={{
             flex: 1, padding: '7px 6px',
-            background: allFansOn
-              ? 'rgba(100,200,255,0.2)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${allFansOn
-              ? 'rgba(100,200,255,0.5)' : 'rgba(255,255,255,0.1)'}`,
+            background: allFansOn ? 'rgba(100,200,255,0.2)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${allFansOn ? 'rgba(100,200,255,0.5)' : 'rgba(255,255,255,0.1)'}`,
             borderRadius: 8, color: 'white',
             fontSize: 11, fontFamily: 'sans-serif',
-            cursor: isManual ? 'pointer' : 'not-allowed',
-            opacity: isManual ? 1 : 0.5,
+            cursor: canClick ? 'pointer' : 'not-allowed',
+            opacity: canClick ? 1 : 0.4,
             transition: 'all 0.2s',
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'center', gap: 4,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           }}
         >
           <span>🌀</span>
@@ -144,19 +145,17 @@ export function DeviceCard() {
           return (
             <button
               key={key}
-              onClick={() => toggleDevice(key)}
-              disabled={!isManual}
+              onClick={() => canClick && toggleDevice(key)}
+              disabled={!canClick}
               style={{
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 4,
                 padding: '10px 8px',
-                background: isOn
-                  ? 'rgba(255,220,100,0.2)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${isOn
-                  ? 'rgba(255,200,80,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                background: isOn ? 'rgba(255,220,100,0.2)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${isOn ? 'rgba(255,200,80,0.5)' : 'rgba(255,255,255,0.1)'}`,
                 borderRadius: 10, color: 'white',
-                cursor: isManual ? 'pointer' : 'not-allowed',
-                opacity: isManual ? 1 : 0.6,
+                cursor: canClick ? 'pointer' : 'not-allowed',
+                opacity: canClick ? 1 : 0.5,
                 transition: 'all 0.2s', fontFamily: 'sans-serif',
               }}
             >
