@@ -106,12 +106,15 @@ export function useAutomation() {
           })
 
         // 2. Aturan LDR (hanya lampu, tidak override waktu)
+        // 2. Aturan LDR — eksplisit ON/OFF agar lampu bisa mati saat terang
         automations
           .filter(r => r.type === 'ldr' && r.enabled !== false)
           .forEach(rule => {
-            if (!evaluateRule(rule, now, sensor.ldr)) return
+            const active = evaluateRule(rule, now, sensor.ldr)
             ;(rule.devices || []).forEach(d => {
-              if (targetDevices[d] === undefined) targetDevices[d] = 'ON'
+              if (targetDevices[d] === undefined) {
+                targetDevices[d] = active ? 'ON' : 'OFF'
+              }
             })
           })
 
