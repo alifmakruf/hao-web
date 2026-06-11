@@ -30,8 +30,8 @@ export function useSimsNotif() {
   notifs.push({
     id: 'gas_aman',
     type: 'info',
-    icon: '✅',
-    message: `Aman ${sensor.gas}`,
+    icon: '#',
+    message: `${sensor.gas}`,
     position: [-0.24, 0.75, -0.47],
   })
     }
