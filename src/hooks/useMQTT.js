@@ -10,8 +10,9 @@ const MQTT_CONFIG = {
   password:        'Admin123',
   clientId:        `hao-web-${Math.random().toString(16).slice(2, 8)}`,
   clean:           true,
-  reconnectPeriod: 3000,
+  reconnectPeriod: 2000,   // retry lebih cepat (dari 3000 → 2000ms)
   connectTimeout:  10000,
+  keepalive:       30,     // ← FIX 1: kirim ping setiap 30 detik agar koneksi tidak idle-drop
 }
 
 const TOPICS = [
@@ -22,6 +23,19 @@ const TOPICS = [
 
 let mqttClient  = null
 let initialized = false
+
+// ── FIX 2: antrian command saat MQTT sedang reconnect ────────
+// Kalau MQTT putus saat user klik, command disimpan di sini
+// dan langsung dikirim begitu reconnect
+const pendingQueue = []
+
+function flushQueue() {
+  while (pendingQueue.length > 0) {
+    const { device, state } = pendingQueue.shift()
+    console.log(`[MQTT] Flush antrian: ${device} → ${state}`)
+    mqttClient.publish('hao/command', JSON.stringify({ device, state }), { qos: 1 })
+  }
+}
 
 function initMQTT() {
   if (initialized && mqttClient) return mqttClient
@@ -45,6 +59,7 @@ function initMQTT() {
     clean:           MQTT_CONFIG.clean,
     reconnectPeriod: MQTT_CONFIG.reconnectPeriod,
     connectTimeout:  MQTT_CONFIG.connectTimeout,
+    keepalive:       MQTT_CONFIG.keepalive,
   })
 
   mqttClient  = client
@@ -60,13 +75,17 @@ function initMQTT() {
       if (err) console.warn('[MQTT] subscribe error:', err.message)
       else     console.log('[MQTT] subscribed:', TOPICS)
     })
+    // FIX 2: kirim antrian yang tertunda saat reconnect
+    if (pendingQueue.length > 0) {
+      console.log(`[MQTT] Flush ${pendingQueue.length} command tertunda`)
+      flushQueue()
+    }
   })
 
   client.on('message', (topic, payload) => {
     try {
       const data = JSON.parse(payload.toString())
 
-      // ── Sensor global ─────────────────────────────────────
       if (topic === 'hao/sensor') {
         setSensor({
           suhu: Number(data.suhu ?? 0),
@@ -75,7 +94,6 @@ function initMQTT() {
         })
       }
 
-      // ── Sensor per ruangan ────────────────────────────────
       if (topic === 'hao/sensor_ruangan') {
         const rooms = ['ruangtamu', 'kamar', 'dapur']
         rooms.forEach((room) => {
@@ -85,16 +103,17 @@ function initMQTT() {
         })
       }
 
-      // ── Status device ─────────────────────────────────────
+      // ── FIX 3: hao/status dari MQTT tidak overwrite device state ──
+      // n8n publish ke hao/status setelah proses sensor.
+      // Kalau kita apply semua field-nya ke React state, maka state
+      // hasil klik tombol bisa ke-overwrite oleh data lama dari n8n.
+      // Solusi: hanya apply sensor & mode dari hao/status,
+      // JANGAN apply device state dari sini (sudah ditangani Firebase onValue
+      // + publishCommand langsung ke ESP).
       if (topic === 'hao/status') {
-        const { mode, alasan, sensor, sensor_ruangan, ...deviceData } = data
+        const { mode, alasan, sensor, sensor_ruangan } = data
 
-        // Update devices
-        if (Object.keys(deviceData).length > 0) {
-          setDevices((prev) => ({ ...prev, ...deviceData }))
-        }
-
-        // Update sensor dari status kalau ada
+        // Hanya update sensor & mode — bukan device ON/OFF
         if (sensor) {
           setSensor({
             suhu: Number(sensor.suhu ?? 0),
@@ -102,8 +121,6 @@ function initMQTT() {
             gas:  Number(sensor.gas  ?? 0),
           })
         }
-
-        // Update sensor ruangan dari status kalau ada
         if (sensor_ruangan) {
           const rooms = ['ruangtamu', 'kamar', 'dapur']
           rooms.forEach((room) => {
@@ -112,9 +129,10 @@ function initMQTT() {
             }
           })
         }
-
         if (mode)   setMode(mode)
         if (alasan) setAlasan(alasan)
+        // Device state (lampu/fan ON-OFF) tidak di-apply dari sini
+        // agar tidak konflik dengan klik user
       }
     } catch (err) {
       console.warn('[MQTT] parse error:', err.message)
@@ -151,8 +169,13 @@ export function useMQTT() {
 }
 
 export function publishCommand(device, state) {
+  // FIX 2: kalau belum connect, masukkan ke antrian — jangan buang command
   if (!mqttClient?.connected) {
-    console.warn('[MQTT] not connected')
+    console.warn(`[MQTT] not connected — queued: ${device} → ${state}`)
+    // Cegah duplikasi di antrian untuk device yang sama
+    const idx = pendingQueue.findIndex(q => q.device === device)
+    if (idx >= 0) pendingQueue[idx] = { device, state }
+    else          pendingQueue.push({ device, state })
     return false
   }
   mqttClient.publish('hao/command', JSON.stringify({ device, state }), { qos: 1 })
@@ -161,9 +184,9 @@ export function publishCommand(device, state) {
 
 export function publishMode(mode) {
   if (!mqttClient?.connected) {
-    console.warn('[MQTT] not connected')
+    console.warn('[MQTT] not connected, mode tidak terkirim')
     return false
   }
-  mqttClient.publish('hao/mode', JSON.stringify({ mode }), { qos: 1 })
+  mqttClient.publish('hao/mode', mode, { qos: 1 })
   return true
 }

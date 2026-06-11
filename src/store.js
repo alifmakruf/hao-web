@@ -81,6 +81,17 @@ export const useHAOStore = create(
 
       liteMode: false,
       setLiteMode: (v) => set({ liteMode: v }),
+
+      // ─── Auth ──────────────────────────────────────────────
+      // 'viewer' | 'guest' | 'admin'
+      authRole: 'viewer',
+      setAuthRole: (role) => set({ authRole: role }),
+
+      authUser: null, // { uid, email, username } untuk admin
+      setAuthUser: (user) => set({ authUser: user }),
+
+      guestToken: null, // token aktif dari Firebase
+      setGuestToken: (token) => set({ guestToken: token }),
     }),
     {
       name: 'hao-storage',
@@ -88,6 +99,7 @@ export const useHAOStore = create(
         mode:     state.mode,
         liteMode: state.liteMode,
         timezone: state.timezone,
+        // authRole tidak di-persist — ditentukan ulang saat mount via onAuthStateChanged
       }),
     }
   )

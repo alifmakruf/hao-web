@@ -32,6 +32,10 @@ import { TaskPanel }       from './components/ui/TaskPanel'
 import { LoadingScreen } from './components/ui/LoadingScreen'
 import { useAutomation } from './hooks/useAutomation'
 import { TechFrame } from './components/scene/TechFrame'
+import { AuthPanel }  from './components/ui/AuthPanel'
+import { GuestPanel } from './components/ui/GuestPanel'
+import { TokenPanel } from './components/ui/TokenPanel'
+import { useAuth }    from './hooks/useAuth'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -280,7 +284,8 @@ function ConnectionStatus() {
 
 // ── App utama ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const { firebaseConnected, liteMode, setLiteMode } = useHAOStore()
+  const { firebaseConnected, liteMode, setLiteMode, authRole } = useHAOStore()
+  const { login, logout, loginGuest, logoutGuest, createToken } = useAuth()
   const [sceneReady, setSceneReady] = useState(false)
   const [loadingDone,  setLoadingDone]  = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -288,6 +293,12 @@ export default function App() {
   const [showWeather,  setShowWeather]  = useState(false)
   const [sidebarOpen,  setSidebarOpen]  = useState(true)
   const [showTask,     setShowTask]     = useState(false)
+  const [showAuth,     setShowAuth]     = useState(false)
+  const [showGuest,    setShowGuest]    = useState(false)
+  const [showToken,    setShowToken]    = useState(false)
+  const authRef   = useRef()
+  const guestRef  = useRef()
+  const tokenRef  = useRef()
 
   const [weather, setWeatherState] = useState(
     () => localStorage.getItem('hao-weather') || 'auto'
@@ -303,6 +314,18 @@ export default function App() {
 
   const orbitRef   = useRef()
   const weatherRef = useRef()
+
+  // Close auth/guest/token panels when clicking outside
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (authRef.current  && !authRef.current.contains(e.target))  setShowAuth(false)
+      if (guestRef.current && !guestRef.current.contains(e.target)) setShowGuest(false)
+      if (tokenRef.current && !tokenRef.current.contains(e.target)) setShowToken(false)
+      if (weatherRef.current && !weatherRef.current.contains(e.target)) setShowWeather(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   // Restore kamera dari localStorage
   useEffect(() => {
@@ -491,6 +514,26 @@ export default function App() {
               </div>
             </div>
 
+            {/* Auth role banner */}
+            {authRole === 'viewer' && (
+              <div style={{ margin: '8px 16px 0', padding: '7px 10px', borderRadius: 9, background: 'rgba(255,200,80,0.08)', border: '1px solid rgba(255,200,80,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13 }}>👁</span>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,200,80,0.9)' }}>View Only</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>Login untuk mengontrol</div>
+                </div>
+              </div>
+            )}
+            {authRole === 'guest' && (
+              <div style={{ margin: '8px 16px 0', padding: '7px 10px', borderRadius: 9, background: 'rgba(99,184,255,0.08)', border: '1px solid rgba(99,184,255,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13 }}>👥</span>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(99,184,255,0.9)' }}>Guest</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>Akses kontrol aktif</div>
+                </div>
+              </div>
+            )}
+
             {/* Sensor */}
             <div style={{ padding: '16px 16px 0' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
@@ -562,6 +605,93 @@ export default function App() {
           position: 'absolute', top: 16, right: 16,
           zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center',
         }}>
+          {/* ── Auth / Guest / Token icon buttons ── */}
+          {/* Login admin */}
+          <div ref={authRef} style={{ position: 'relative' }}>
+            <IconButton
+              onClick={() => { setShowAuth(v => !v); setShowGuest(false); setShowToken(false) }}
+              title={authRole === 'admin' ? 'Admin (Login)' : 'Login Admin'}
+              active={showAuth || authRole === 'admin'}
+            >
+              <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+                <circle cx="8.5" cy="5.5" r="3" stroke="white" strokeWidth="1.5"/>
+                <path d="M2 15c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </IconButton>
+            {showAuth && (
+              <div style={{
+                position: 'absolute', top: 46, right: 0, width: 240,
+                background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14,
+                padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Admin Login
+                </div>
+                <AuthPanel onClose={() => setShowAuth(false)} />
+              </div>
+            )}
+          </div>
+
+          {/* Guest token */}
+          <div ref={guestRef} style={{ position: 'relative' }}>
+            <IconButton
+              onClick={() => { setShowGuest(v => !v); setShowAuth(false); setShowToken(false) }}
+              title={authRole === 'guest' ? 'Guest (Aktif)' : 'Login Guest'}
+              active={showGuest || authRole === 'guest'}
+            >
+              <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+                <circle cx="6" cy="5.5" r="2.5" stroke="white" strokeWidth="1.4"/>
+                <path d="M1 14.5c0-2.76 2.24-5 5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+                <circle cx="12" cy="5.5" r="2.5" stroke="white" strokeWidth="1.4" opacity="0.6"/>
+                <path d="M11 9.5c2.76 0 5 2.24 5 5" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity="0.6"/>
+              </svg>
+            </IconButton>
+            {showGuest && (
+              <div style={{
+                position: 'absolute', top: 46, right: 0, width: 240,
+                background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14,
+                padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Guest
+                </div>
+                <GuestPanel onClose={() => setShowGuest(false)} />
+              </div>
+            )}
+          </div>
+
+          {/* Create Token — admin only */}
+          {authRole === 'admin' && (
+            <div ref={tokenRef} style={{ position: 'relative' }}>
+              <IconButton
+                onClick={() => { setShowToken(v => !v); setShowAuth(false); setShowGuest(false) }}
+                title="Create Token"
+                active={showToken}
+              >
+                <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+                  <rect x="2" y="7" width="13" height="8" rx="2" stroke="white" strokeWidth="1.4"/>
+                  <path d="M5.5 7V5a3 3 0 016 0v2" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+                  <circle cx="8.5" cy="11" r="1.2" fill="white"/>
+                </svg>
+              </IconButton>
+              {showToken && (
+                <div style={{
+                  position: 'absolute', top: 46, right: 0, width: 260,
+                  background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255,200,80,0.2)', borderRadius: 14,
+                  padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                    Create Token
+                  </div>
+                  <TokenPanel onClose={() => setShowToken(false)} />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Lite Mode — ditambahkan sebelum Weather */}
           <IconButton
             onClick={() => setLiteMode(!liteMode)}

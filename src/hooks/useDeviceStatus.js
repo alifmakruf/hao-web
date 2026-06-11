@@ -87,14 +87,25 @@ export function useDeviceStatus() {
       return
     }
     const newState = state.devices?.[deviceKey] === 'ON' ? 'OFF' : 'ON'
+
+    // 1. Update UI langsung (optimistic) — tidak tunggu network
     toggleDeviceLocal(deviceKey)
+
+    // 2. Publish MQTT langsung ke ESP — ini yang paling cepat
+    //    Kalau MQTT sedang reconnect, command masuk antrian di useMQTT
+    const mqttSent = publishCommand(deviceKey, newState)
+    if (!mqttSent) {
+      console.warn(`[HAO] MQTT tidak connect — ${deviceKey} masuk antrian, Firebase tetap diupdate`)
+    }
+
+    // 3. Update Firebase (untuk sync state & n8n) — async, tidak block UI
     try {
       await set(ref(db, `hao/status/${deviceKey}`), newState)
     } catch (err) {
-      console.warn('[Firebase] Gagal toggle:', err.message)
-      toggleDeviceLocal(deviceKey)
+      console.warn('[Firebase] Gagal update:', err.message)
+      // Rollback UI kalau Firebase juga gagal dan MQTT juga gagal
+      if (!mqttSent) toggleDeviceLocal(deviceKey)
     }
-    publishCommand(deviceKey, newState)
   }
 
   const changeMode = async (newMode) => {

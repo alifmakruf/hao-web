@@ -22,9 +22,10 @@ const LAMP_KEYS = DEVICES.filter(d => d.key.startsWith('lampu')).map(d => d.key)
 const FAN_KEYS  = DEVICES.filter(d => d.key.startsWith('fan')).map(d => d.key)
 
 export function DeviceCard() {
-  const { devices, mode, setDevices } = useHAOStore()
+  const { devices, mode, setDevices, authRole } = useHAOStore()
   const { toggleDevice } = useDeviceStatus()
   const isManual = mode === 'manual'
+  const canControl = authRole === 'admin' || authRole === 'guest'
 
   // Cek apakah semua lampu ON
   const allLampsOn = LAMP_KEYS.every(k => devices[k] === 'ON')

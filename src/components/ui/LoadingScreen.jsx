@@ -186,7 +186,7 @@ export function LoadingScreen({ sceneReady, onHidden }) {
           fontSize: 11, color: 'rgba(255,255,255,0.2)',
           fontFamily: 'sans-serif', letterSpacing: '0.1em',
         }}>
-          HAO v1.46· ESP32 + Firebase + HiveMQ
+          HAO v1.7· ESP32 + Firebase + HiveMQ
         </div>
       </div>
     </>

@@ -341,7 +341,8 @@ function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
 
 // ── Tab: Aturan Otomasi ───────────────────────────────────────
 function AutomationTab() {
-  const { automations, tempPresets, timezone, setTimezone, mode } = useHAOStore()
+  const { automations, tempPresets, timezone, setTimezone, mode, authRole } = useHAOStore()
+  const canControl = authRole === 'admin' || authRole === 'guest'
   const { addAutomation, updateAutomation, deleteAutomation, toggleAutomation } = useAutomation()
 
   const [showForm, setShowForm] = useState(false)
@@ -473,11 +474,11 @@ function AutomationTab() {
 
       {/* Tombol tambah */}
       {!showForm && !editRule && (
-        <button onClick={() => setShowForm(true)} style={{
+        <button onClick={() => canControl && setShowForm(true)} disabled={!canControl} style={{
           padding: '8px', borderRadius: 10,
-          background: 'rgba(29,158,117,0.15)', border: '1px dashed rgba(29,158,117,0.4)',
-          color: '#1D9E75', cursor: 'pointer', fontSize: 12,
-        }}>+ Tambah Aturan</button>
+          background: canControl ? 'rgba(29,158,117,0.15)' : 'rgba(255,255,255,0.05)', border: `1px dashed ${canControl ? 'rgba(29,158,117,0.4)' : 'rgba(255,255,255,0.15)'}`,
+          color: canControl ? '#1D9E75' : 'rgba(255,255,255,0.3)', cursor: canControl ? 'pointer' : 'not-allowed', fontSize: 12,
+        }}>{canControl ? '+ Tambah Aturan' : '🔒 Login untuk menambah aturan'}</button>
       )}
 
       {/* Form tambah baru */}

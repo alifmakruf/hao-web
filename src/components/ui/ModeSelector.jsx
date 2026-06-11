@@ -7,8 +7,9 @@ const MODES = [
 ]
 
 export function ModeSelector() {
-  const { mode } = useHAOStore()
+  const { mode, authRole } = useHAOStore()
   const { changeMode } = useDeviceStatus()
+  const canControl = authRole === 'admin' || authRole === 'guest'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -17,7 +18,9 @@ export function ModeSelector() {
         return (
           <button
             key={id}
-            onClick={() => changeMode(id)}
+            onClick={() => canControl && changeMode(id)}
+            disabled={!canControl}
+            style={{ cursor: canControl ? 'pointer' : 'not-allowed', opacity: (!canControl && !isActive) ? 0.5 : 1 }}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '8px 12px',
