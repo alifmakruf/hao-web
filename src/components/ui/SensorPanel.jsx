@@ -12,9 +12,9 @@ const SENSOR_CONFIG = [
     key: 'ldr', label: 'Cahaya', icon: '☀',
     // FIX: LDR DO HIGH=gelap(nilai rendah 100), LOW=terang(nilai tinggi 800)
     // jadi nilai rendah = gelap, nilai tinggi = terang
-    getColor: (v) => v <= 600 ? '#EF9F27' : v <= 100 ? '#1D9E75' : '#534AB7',
-    getBg:    (v) => v <= 600 ? '#FAEEDA' : v <= 100 ? '#E1F5EE' : '#EEEDFE',
-    format:   (v) => v <= 600 ? 'Terang'  : v <= 100 ? 'Normal'  : 'Gelap',
+    getColor: (v) => v <= 800 ? '#EF9F27' : v <= 100 ? '#1D9E75' : '#534AB7',
+    getBg:    (v) => v <= 800 ? '#FAEEDA' : v <= 100 ? '#E1F5EE' : '#EEEDFE',
+    format:   (v) => v <= 800 ? 'Terang'  : v <= 100 ? 'Normal'  : 'Gelap',
   },
   {
     key: 'gas', label: 'Gas', icon: '💨',
