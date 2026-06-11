@@ -26,7 +26,14 @@ export function useSimsNotif() {
       })
     } else {
       removeNotif('gas_danger')
-      removeNotif('gas_warn')
+  removeNotif('gas_warn')
+  notifs.push({
+    id: 'gas_aman',
+    type: 'info',
+    icon: '✅',
+    message: `Aman ${sensor.gas}`,
+    position: [-0.24, 0.75, -0.47],
+  })
     }
 
     // ── Suhu ──────────────────────────────────────────────
