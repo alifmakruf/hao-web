@@ -66,6 +66,19 @@ export function logDeviceToggle(deviceKey, newState) {
   })
 }
 
+export function logBulkToggle(category, newState) {
+  const isLamp = category === 'lampu'
+  const label  = isLamp ? 'semua lampu' : 'semua kipas'
+  const action = newState === 'ON' ? 'menyalakan' : 'mematikan'
+  pushActivityLog({
+    type:    'bulk_toggle',
+    message: `${action} ${label}`,
+    category,
+    state:   newState,
+    icon:    isLamp ? '💡' : '🌀',
+  })
+}
+
 export function logModeChange(newMode) {
   const label = MODE_LABELS[newMode] || newMode
   pushActivityLog({

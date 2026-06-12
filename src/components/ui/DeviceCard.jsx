@@ -3,6 +3,7 @@ import { useDeviceStatus } from '../../hooks/useDeviceStatus'
 import { ref, set } from 'firebase/database'
 import { db } from '../../firebase'
 import { publishCommand } from '../../hooks/useMQTT'
+import { logBulkToggle } from '../../hooks/useActivityLog'
 
 const DEVICES = [
   { key: 'lampu_ruangtamu',        label: 'Lampu Ruang Tamu',  icon: '💡' },
@@ -43,6 +44,7 @@ export function DeviceCard() {
       const updates = {}
       LAMP_KEYS.forEach(k => { updates[k] = newState })
       setDevices(prev => ({ ...prev, ...updates }))
+      logBulkToggle('lampu', newState)
       await Promise.all(LAMP_KEYS.map(k => set(ref(db, `hao/status/${k}`), newState)))
       LAMP_KEYS.forEach(k => { try { publishCommand(k, newState) } catch {} })
     } catch (err) {
@@ -57,6 +59,7 @@ export function DeviceCard() {
       const updates = {}
       FAN_KEYS.forEach(k => { updates[k] = newState })
       setDevices(prev => ({ ...prev, ...updates }))
+      logBulkToggle('fan', newState)
       await Promise.all(FAN_KEYS.map(k => set(ref(db, `hao/status/${k}`), newState)))
       FAN_KEYS.forEach(k => { try { publishCommand(k, newState) } catch {} })
     } catch (err) {
