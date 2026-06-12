@@ -49,7 +49,8 @@ const WEATHER_OPTIONS = [
 
 const DEFAULT_CAM_POS    = [3.5, 4.5, 3.5]
 const DEFAULT_CAM_TARGET = [0.3, 0, 0.5]
-const SIDEBAR_WIDTH      = 270
+const SIDEBAR_WIDTH       = 270
+const RIGHT_SIDEBAR_WIDTH = 260
 
 // ── Scene lighting + weather effects ─────────────────────────────────────────
 function SceneSetup({ weather }) {
@@ -294,6 +295,7 @@ export default function App() {
   const [isAnchored,   setIsAnchored]   = useState(false)
   const [showWeather,  setShowWeather]  = useState(false)
   const [sidebarOpen,  setSidebarOpen]  = useState(true)
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   const [showTask,     setShowTask]     = useState(false)
   const [showAuth,     setShowAuth]     = useState(false)
   const [showGuest,    setShowGuest]    = useState(false)
@@ -412,8 +414,18 @@ export default function App() {
     }
   }
 
-  const activeWeather = WEATHER_OPTIONS.find(w => w.id === weather)
-  const showSidebar   = sidebarOpen && !isFullscreen
+  const activeWeather    = WEATHER_OPTIONS.find(w => w.id === weather)
+  const showSidebar      = sidebarOpen && !isFullscreen && !rightSidebarOpen
+  const showRightSidebar = rightSidebarOpen && !isFullscreen && !sidebarOpen
+
+  const toggleLeftSidebar = () => {
+    if (!sidebarOpen) { setRightSidebarOpen(false); setSidebarOpen(true) }
+    else setSidebarOpen(false)
+  }
+  const toggleRightSidebar = () => {
+    if (!rightSidebarOpen) { setSidebarOpen(false); setRightSidebarOpen(true) }
+    else setRightSidebarOpen(false)
+  }
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', fontFamily: 'sans-serif' }}>
@@ -434,6 +446,8 @@ export default function App() {
           width: '100%', height: '100%',
           clipPath: showSidebar
             ? `inset(0 0 0 ${SIDEBAR_WIDTH}px)`
+            : showRightSidebar
+            ? `inset(0 ${RIGHT_SIDEBAR_WIDTH}px 0 0)`
             : 'none',
           transition: 'clip-path 0.32s cubic-bezier(0.4,0,0.2,1)',
         }}
@@ -601,7 +615,7 @@ export default function App() {
 
         {/* ── Tombol toggle sidebar ── */}
         <button
-          onClick={() => setSidebarOpen(v => !v)}
+          onClick={toggleLeftSidebar}
           title={showSidebar ? 'Tutup sidebar' : 'Buka sidebar'}
           style={{
             position: 'absolute',
@@ -631,44 +645,36 @@ export default function App() {
           </svg>
         </button>
 
-        {/* ── Tombol kanan atas ── */}
-        <div style={{
-          position: 'absolute', top: 16, right: 16,
-          zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center',
-        }}>
-          {/* Lite Mode — ditambahkan sebelum Weather */}
-          <IconButton
-            onClick={() => setLiteMode(!liteMode)}
-            title={liteMode ? 'Mode Normal' : 'Mode Lite'}
-            active={liteMode}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="6" stroke="white" strokeWidth="1.5"/>
-              <path d="M8 4v4l3 2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </IconButton>
-
-          {/* Weather picker */}
-          <div ref={weatherRef} style={{ position: 'relative' }}>
-            <IconButton onClick={() => setShowWeather(v => !v)} title="Cuaca" active={showWeather || weather !== 'auto'}>
-              <span style={{ fontSize: 17, lineHeight: 1 }}>{activeWeather?.icon ?? '🌤️'}</span>
+        {/* ── Tombol kanan atas — hanya Fullscreen & TopDown (selalu tampil) ── */}
+        {!isFullscreen && (
+          <div style={{
+            position: 'absolute', top: 16, right: 16,
+            zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center',
+          }}>
+            {/* Top-down / perspektif */}
+            <IconButton onClick={toggleAnchor} title={isAnchored ? 'Kembali ke Perspektif' : 'Top-Down View'} active={isAnchored}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <rect x="2" y="2" width="14" height="14" rx="2" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.6" fill="none"/>
+                <line x1="9" y1="2" x2="9" y2="16" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.2" strokeDasharray="2 2"/>
+                <line x1="2" y1="9" x2="16" y2="9" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.2" strokeDasharray="2 2"/>
+                <circle cx="9" cy="9" r="2" fill={isAnchored ? '#ff6363' : 'white'}/>
+              </svg>
             </IconButton>
-            {showWeather && (
-              <WeatherPanel weather={weather} onChange={setWeather} onClose={() => setShowWeather(false)} />
-            )}
+
+            {/* Toggle sidebar kanan */}
+            <IconButton onClick={toggleRightSidebar} title={showRightSidebar ? 'Tutup panel' : 'Buka panel'} active={showRightSidebar}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <rect x="2" y="2" width="14" height="14" rx="2" stroke="white" strokeWidth="1.5" fill="none"/>
+                <line x1="11" y1="2" x2="11" y2="16" stroke="white" strokeWidth="1.5"/>
+                <line x1="13" y1="6" x2="15" y2="9" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+                <line x1="13" y1="12" x2="15" y2="9" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            </IconButton>
           </div>
+        )}
 
-          {/* Top-down / perspektif */}
-          <IconButton onClick={toggleAnchor} title={isAnchored ? 'Kembali ke Perspektif' : 'Top-Down View'} active={isAnchored}>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <rect x="2" y="2" width="14" height="14" rx="2" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.6" fill="none"/>
-              <line x1="9" y1="2" x2="9" y2="16" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.2" strokeDasharray="2 2"/>
-              <line x1="2" y1="9" x2="16" y2="9" stroke={isAnchored ? '#ff6363' : 'white'} strokeWidth="1.2" strokeDasharray="2 2"/>
-              <circle cx="9" cy="9" r="2" fill={isAnchored ? '#ff6363' : 'white'}/>
-            </svg>
-          </IconButton>
-
-          {/* Fullscreen */}
+        {/* Tombol fullscreen — selalu di pojok kanan atas, meski fullscreen */}
+        <div style={{ position: 'absolute', top: 16, right: isFullscreen ? 16 : (showRightSidebar ? RIGHT_SIDEBAR_WIDTH + 16 : 16), zIndex: 9999, transition: 'right 0.32s cubic-bezier(0.4,0,0.2,1)' }}>
           <IconButton onClick={toggleFullscreen} title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'} active={isFullscreen}>
             {isFullscreen ? (
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -682,172 +688,211 @@ export default function App() {
           </IconButton>
         </div>
 
-        {/* ── Status koneksi Firebase + MQTT ── */}
-        <ConnectionStatus />
-
-        {/* ── Auth Panel kanan (di atas TaskPanel) ── */}
+        {/* ── Sidebar kanan ── */}
         <div style={{
-          position: 'absolute', bottom: 116, right: 16,
-          zIndex: 99998,
-          display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end',
+          position: 'absolute', top: 0, right: 0,
+          height: '100%',
+          width: showRightSidebar ? RIGHT_SIDEBAR_WIDTH : 0,
+          overflow: 'hidden',
+          transition: 'width 0.32s cubic-bezier(0.4,0,0.2,1)',
+          zIndex: 99999,
         }}>
-          {/* Token button — admin only */}
-          {authRole === 'admin' && (
-            <div ref={tokenRef} style={{ position: 'relative' }}>
+          <div style={{
+            width: RIGHT_SIDEBAR_WIDTH,
+            height: '100%',
+            background: 'linear-gradient(160deg, rgba(8,12,24,0.92) 0%, rgba(12,18,36,0.88) 100%)',
+            backdropFilter: 'blur(16px)',
+            borderLeft: '1px solid rgba(255,255,255,0.07)',
+            display: 'flex', flexDirection: 'column',
+            overflowY: 'auto', overflowX: 'hidden',
+          }}>
+
+            {/* Header */}
+            <div style={{ padding: '20px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                Panel Kontrol
+              </div>
+            </div>
+
+            {/* ── Status Koneksi ── */}
+            <div style={{ padding: '14px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Koneksi
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {/* Firebase */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: 'sans-serif' }}>Firebase</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: firebaseConnected ? '#22c55e' : '#ef4444', boxShadow: firebaseConnected ? '0 0 6px #22c55e' : 'none' }} />
+                    <span style={{ fontSize: 11, color: firebaseConnected ? '#22c55e' : '#ef4444' }}>{firebaseConnected ? 'Terhubung' : 'Putus'}</span>
+                  </div>
+                </div>
+                {/* MQTT */}
+                {(() => {
+                  const { mqttStatus } = useHAOStore.getState()
+                  const mqttColor = { connected: '#22c55e', connecting: '#f59e0b', error: '#ef4444', disconnected: '#6b7280' }[mqttStatus] ?? '#6b7280'
+                  const mqttLabel = { connected: 'Terhubung', connecting: 'Menghubungkan...', error: 'Error', disconnected: 'Terputus' }[mqttStatus] ?? 'Terputus'
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>MQTT</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: mqttColor, boxShadow: mqttStatus === 'connected' ? `0 0 6px ${mqttColor}` : 'none' }} />
+                        <span style={{ fontSize: 11, color: mqttColor }}>{mqttLabel}</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* ── Lite Mode ── */}
+            <div style={{ padding: '14px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Performa
+              </div>
               <button
-                onClick={() => { setShowToken(v => !v); setShowAuth(false); setShowGuest(false) }}
-                title="Create Token Guest"
+                onClick={() => setLiteMode(!liteMode)}
                 style={{
-                  width: 46, height: 46, borderRadius: 14,
-                  background: showToken ? 'rgba(255,200,80,0.25)' : 'rgba(8,12,24,0.9)',
-                  backdropFilter: 'blur(10px)',
-                  border: `1px solid ${showToken ? 'rgba(255,200,80,0.5)' : 'rgba(255,255,255,0.15)'}`,
-                  color: showToken ? '#ffc850' : 'rgba(255,255,255,0.7)',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '100%', padding: '10px 12px', borderRadius: 10,
+                  background: liteMode ? 'rgba(99,184,255,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${liteMode ? 'rgba(99,184,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                  color: liteMode ? '#63b8ff' : 'rgba(255,255,255,0.6)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
                   transition: 'all 0.2s',
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 17 17" fill="none">
-                  <rect x="2" y="7" width="13" height="8" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M5.5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  <circle cx="8.5" cy="11" r="1.2" fill="currentColor"/>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M8 4v4l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600 }}>Mode Lite</div>
+                  <div style={{ fontSize: 10, opacity: 0.6 }}>{liteMode ? 'Aktif — efek dimatikan' : 'Nonaktif'}</div>
+                </div>
+                <div style={{ marginLeft: 'auto', width: 28, height: 16, borderRadius: 8, background: liteMode ? '#63b8ff' : 'rgba(255,255,255,0.15)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: 2, left: liteMode ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                </div>
               </button>
-              {showToken && (
-                <div style={{
-                  position: 'absolute', bottom: 52, right: 0, width: 260,
-                  background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(255,200,80,0.2)', borderRadius: 14,
-                  padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-                    Create Token
-                  </div>
-                  <TokenPanel onClose={() => setShowToken(false)} />
-                </div>
-              )}
             </div>
-          )}
 
-          {/* Guest button */}
-          <div ref={guestRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => { setShowGuest(v => !v); setShowAuth(false); setShowToken(false) }}
-              title={authRole === 'guest' ? 'Guest (aktif) — klik untuk logout' : 'Login sebagai Guest'}
-              style={{
-                width: 46, height: 46, borderRadius: 14,
-                background: (showGuest || authRole === 'guest') ? 'rgba(99,184,255,0.2)' : 'rgba(8,12,24,0.9)',
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${(showGuest || authRole === 'guest') ? 'rgba(99,184,255,0.5)' : 'rgba(255,255,255,0.15)'}`,
-                color: (showGuest || authRole === 'guest') ? '#63b8ff' : 'rgba(255,255,255,0.7)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.2s', position: 'relative',
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 17 17" fill="none">
-                <circle cx="6" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M1 14.5c0-2.76 2.24-5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <circle cx="12" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
-                <path d="M11 9.5c2.76 0 5 2.24 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
-              </svg>
-              {authRole === 'guest' && (
-                <span style={{
-                  position: 'absolute', top: 6, right: 6,
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: '#63b8ff', boxShadow: '0 0 5px #63b8ff',
-                }} />
-              )}
-            </button>
-            {showGuest && (
-              <div style={{
-                position: 'absolute', bottom: 52, right: 0, width: 240,
-                background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14,
-                padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  Guest Login
-                </div>
-                <GuestPanel onClose={() => setShowGuest(false)} />
+            {/* ── Cuaca ── */}
+            <div style={{ padding: '14px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Cuaca
               </div>
-            )}
-          </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {WEATHER_OPTIONS.map(({ id, label, icon }) => (
+                  <button key={id} onClick={() => setWeather(id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '8px 12px', borderRadius: 9, cursor: 'pointer',
+                    background: weather === id ? 'rgba(99,184,255,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${weather === id ? 'rgba(99,184,255,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                    color: weather === id ? 'white' : 'rgba(255,255,255,0.5)',
+                    transition: 'all 0.15s',
+                  }}>
+                    <span style={{ fontSize: 16, width: 22, textAlign: 'center' }}>{icon}</span>
+                    <span style={{ fontSize: 12, fontWeight: weather === id ? 600 : 400 }}>{label}</span>
+                    {weather === id && <span style={{ marginLeft: 'auto', color: '#63b8ff', fontSize: 14 }}>✓</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Admin Login button */}
-          <div ref={authRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => { setShowAuth(v => !v); setShowGuest(false); setShowToken(false) }}
-              title={authRole === 'admin' ? 'Admin (aktif) — klik untuk logout' : 'Login Admin'}
-              style={{
-                width: 46, height: 46, borderRadius: 14,
-                background: (showAuth || authRole === 'admin') ? 'rgba(29,158,117,0.25)' : 'rgba(8,12,24,0.9)',
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${(showAuth || authRole === 'admin') ? 'rgba(29,158,117,0.5)' : 'rgba(255,255,255,0.15)'}`,
-                color: (showAuth || authRole === 'admin') ? '#1D9E75' : 'rgba(255,255,255,0.7)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.2s', position: 'relative',
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 17 17" fill="none">
-                <circle cx="8.5" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.6"/>
-                <path d="M2 15c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-              </svg>
-              {authRole === 'admin' && (
-                <span style={{
-                  position: 'absolute', top: 6, right: 6,
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: '#1D9E75', boxShadow: '0 0 5px #1D9E75',
-                }} />
-              )}
-            </button>
-            {showAuth && (
-              <div style={{
-                position: 'absolute', bottom: 52, right: 0, width: 240,
-                background: 'rgba(10,14,26,0.97)', backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255,255,255,0.13)', borderRadius: 14,
-                padding: 14, zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  Admin Login
-                </div>
-                <AuthPanel onClose={() => setShowAuth(false)} />
+            {/* ── Task Harian ── */}
+            {/* <div style={{ padding: '14px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Task Harian
               </div>
-            )}
+              <TaskPanel inline />
+            </div> */}
+
+            {/* ── Auth ── */}
+            <div style={{ padding: '14px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Akun
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Guest */}
+                <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${authRole === 'guest' ? 'rgba(99,184,255,0.3)' : 'rgba(255,255,255,0.07)'}`, background: authRole === 'guest' ? 'rgba(99,184,255,0.08)' : 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>👥</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: authRole === 'guest' ? '#63b8ff' : 'rgba(255,255,255,0.6)' }}>
+                      {authRole === 'guest' ? 'Guest (aktif)' : 'Guest'}
+                    </span>
+                    {authRole === 'guest' && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#63b8ff', boxShadow: '0 0 5px #63b8ff', marginLeft: 'auto' }} />}
+                  </div>
+                  <div style={{ padding: '0 12px 10px' }}>
+                    <GuestPanel onClose={() => {}} inline />
+                  </div>
+                </div>
+
+                {/* Admin */}
+                <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${authRole === 'admin' ? 'rgba(29,158,117,0.3)' : 'rgba(255,255,255,0.07)'}`, background: authRole === 'admin' ? 'rgba(29,158,117,0.08)' : 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>🔑</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: authRole === 'admin' ? '#1D9E75' : 'rgba(255,255,255,0.6)' }}>
+                      {authRole === 'admin' ? 'Admin (aktif)' : 'Admin'}
+                    </span>
+                    {authRole === 'admin' && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#1D9E75', boxShadow: '0 0 5px #1D9E75', marginLeft: 'auto' }} />}
+                  </div>
+                  <div style={{ padding: '0 12px 10px' }}>
+                    <AuthPanel onClose={() => {}} inline />
+                  </div>
+                </div>
+
+                {/* Token — admin only */}
+                {authRole === 'admin' && (
+                  <div style={{ borderRadius: 10, border: '1px solid rgba(255,200,80,0.2)', background: 'rgba(255,200,80,0.05)' }}>
+                    <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>🎟</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,200,80,0.8)' }}>Buat Token Guest</span>
+                    </div>
+                    <div style={{ padding: '0 12px 10px' }}>
+                      <TokenPanel onClose={() => {}} inline />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ height: 20 }} />
           </div>
         </div>
 
-        {/* Burger button pojok kanan bawah */}
-        <button
-          onClick={() => setShowTask(v => !v)}
-          title="Task Harian"
-          style={{
-            position: 'absolute', bottom: 60, right: 16,
-            zIndex: 99998,
-            width: 46, height: 46, borderRadius: 14,
-            background: showTask
-              ? 'rgba(29,158,117,0.8)' : 'rgba(8,12,24,0.9)',
-            backdropFilter: 'blur(10px)',
-            border: `1px solid ${showTask
-              ? 'rgba(29,158,117,0.6)' : 'rgba(255,255,255,0.15)'}`,
-            cursor: 'pointer',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: 4,
-            transition: 'all 0.2s',
-          }}
-        >
-          {[0,1,2].map(i => (
-            <div key={i} style={{
-              width: showTask ? (i === 1 ? 0 : 18) : 18,
-              height: 2, borderRadius: 2,
-              background: 'white',
-              transition: 'all 0.2s',
-              opacity: showTask && i === 1 ? 0 : 1,
-            }} />
-          ))}
-        </button>
-
-        {/* Task Panel */}
-        {showTask && <TaskPanel onClose={() => setShowTask(false)} />}
+        {/* Toggle sidebar kanan */}
+        {!isFullscreen && (
+          <button
+            onClick={toggleRightSidebar}
+            title={showRightSidebar ? 'Tutup panel kanan' : 'Buka panel kanan'}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              right: showRightSidebar ? RIGHT_SIDEBAR_WIDTH : 0,
+              transform: 'translateY(-50%)',
+              transition: 'right 0.32s cubic-bezier(0.4,0,0.2,1)',
+              zIndex: 200,
+              width: 20, height: 56,
+              background: 'rgba(20,28,50,0.92)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRight: showRightSidebar ? 'none' : '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '8px 0 0 8px',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(255,255,255,0.6)',
+              fontSize: 12, padding: 0,
+            }}
+          >
+            <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+              {showRightSidebar ? (
+                <path d="M3 2L8 8L3 14" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              ) : (
+                <path d="M7 2L2 8L7 14" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              )}
+            </svg>
+          </button>
+        )}
 
         {/* ── Toast notifikasi ── */}
         <NotifToast />
