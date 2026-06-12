@@ -37,6 +37,9 @@ import { GuestPanel } from './components/ui/GuestPanel'
 import { TokenPanel } from './components/ui/TokenPanel'
 import { useAuth }    from './hooks/useAuth'
 import { usePresence } from './hooks/usePresence'
+import { WeatherWidget } from './components/ui/WeatherWidget'
+import { useActivityLog } from './hooks/useActivityLog'
+import { ActivityLogModal } from './components/ui/ActivityLogModal'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -94,6 +97,7 @@ function AppInitializer() {
   useSimsNotif()
   useAutomation()
   usePresence()
+  useActivityLog()
   return null
 }
 
@@ -300,6 +304,7 @@ export default function App() {
   const [showAuth,     setShowAuth]     = useState(false)
   const [showGuest,    setShowGuest]    = useState(false)
   const [showToken,    setShowToken]    = useState(false)
+  const [showActivityLog, setShowActivityLog] = useState(false)
   const authRef   = useRef()
   const guestRef  = useRef()
   const tokenRef  = useRef()
@@ -777,10 +782,18 @@ export default function App() {
               </button>
             </div>
 
-            {/* ── Cuaca ── */}
+            {/* ── Cuaca Lokasi Anda ── */}
             <div style={{ padding: '14px 16px 0' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
-                Cuaca
+                Cuaca Lokasi Anda
+              </div>
+              <WeatherWidget />
+            </div>
+
+            {/* ── Efek Cuaca Scene ── */}
+            <div style={{ padding: '14px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Efek Cuaca Scene
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {WEATHER_OPTIONS.map(({ id, label, icon }) => (
@@ -807,6 +820,32 @@ export default function App() {
               </div>
               <TaskPanel inline />
             </div> */}
+
+            {/* ── Log Aktivitas ── */}
+            <div style={{ padding: '14px 16px 0' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Aktivitas
+              </div>
+              <button
+                onClick={() => setShowActivityLog(true)}
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.7)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                  transition: 'all 0.2s', fontFamily: 'sans-serif',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+              >
+                <span style={{ fontSize: 16 }}>📜</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600 }}>Log Aktivitas</div>
+                  <div style={{ fontSize: 10, opacity: 0.5 }}>Riwayat perubahan admin & guest</div>
+                </div>
+              </button>
+            </div>
 
             {/* ── Auth ── */}
             <div style={{ padding: '14px 16px 0' }}>
@@ -909,6 +948,11 @@ export default function App() {
           pointer-events: none;
         }
       `}</style>
+
+      {/* ── Modal Log Aktivitas ── */}
+      {showActivityLog && (
+        <ActivityLogModal onClose={() => setShowActivityLog(false)} />
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { ref, onValue, set } from 'firebase/database'
 import { db } from '../firebase'
 import { useHAOStore } from '../store'
 import { publishCommand, publishMode } from './useMQTT'
+import { logDeviceToggle, logModeChange } from './useActivityLog'
 
 const DEVICE_KEYS = [
   'lampu_ruangtamu', 'lampu_dapurdankeluarga',
@@ -103,6 +104,9 @@ export function useDeviceStatus() {
     // 2. Update UI langsung (optimistic)
     toggleDeviceLocal(deviceKey)
 
+    // 2b. Catat ke log aktivitas
+    logDeviceToggle(deviceKey, newState)
+
     // 3. Publish MQTT langsung ke ESP
     const mqttSent = publishCommand(deviceKey, newState)
     if (!mqttSent) {
@@ -131,6 +135,7 @@ export function useDeviceStatus() {
     pendingMode = true
     setMode(newMode)
     publishMode(newMode)
+    logModeChange(newMode)
 
     try {
       await set(ref(db, 'hao/status/mode'), newMode)

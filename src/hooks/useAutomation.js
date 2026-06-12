@@ -3,6 +3,10 @@ import { ref, onValue, set, push, remove, update } from 'firebase/database'
 import { db } from '../firebase'
 import { useHAOStore } from '../store'
 import { publishCommand } from './useMQTT'
+import {
+  logAutomationAdd, logAutomationUpdate, logAutomationDelete,
+  logTempPresetAdd, logTempPresetUpdate, logTempPresetDelete,
+} from './useActivityLog'
 
 const TZ_OFFSET = { WIB: 7, WITA: 8, WIT: 9 }
 
@@ -218,6 +222,7 @@ export function useAutomation() {
   const addAutomation = async (rule) => {
     try {
       await push(ref(db, 'hao/automations'), { ...rule, enabled: true, createdAt: Date.now() })
+      logAutomationAdd(rule)
       return true
     } catch (err) { console.error('[Automation] Add:', err.message); return false }
   }
@@ -225,13 +230,17 @@ export function useAutomation() {
   const updateAutomation = async (id, updates) => {
     try {
       await update(ref(db, `hao/automations/${id}`), updates)
+      const rule = automations.find(r => r.id === id)
+      logAutomationUpdate(rule?.name || id, updates)
       return true
     } catch (err) { console.error('[Automation] Update:', err.message); return false }
   }
 
   const deleteAutomation = async (id) => {
     try {
+      const rule = automations.find(r => r.id === id)
       await remove(ref(db, `hao/automations/${id}`))
+      logAutomationDelete(rule?.name || id)
       return true
     } catch (err) { console.error('[Automation] Delete:', err.message); return false }
   }
@@ -243,13 +252,16 @@ export function useAutomation() {
   const addTempPreset = async (preset) => {
     try {
       await push(ref(db, 'hao/tempPresets'), { ...preset, createdAt: Date.now() })
+      logTempPresetAdd(preset.name || 'Preset')
       return true
     } catch (err) { console.error('[TempPreset] Add:', err.message); return false }
   }
 
   const deleteTempPreset = async (id) => {
     try {
+      const preset = tempPresets.find(p => p.id === id)
       await remove(ref(db, `hao/tempPresets/${id}`))
+      logTempPresetDelete(preset?.name || id)
       return true
     } catch (err) { console.error('[TempPreset] Delete:', err.message); return false }
   }
@@ -257,6 +269,8 @@ export function useAutomation() {
   const updateTempPreset = async (id, updates) => {
     try {
       await update(ref(db, `hao/tempPresets/${id}`), updates)
+      const preset = tempPresets.find(p => p.id === id)
+      logTempPresetUpdate(preset?.name || id)
       return true
     } catch (err) { console.error('[TempPreset] Update:', err.message); return false }
   }

@@ -93,6 +93,10 @@ export const useHAOStore = create(
       guestToken: null, // token aktif dari Firebase
       setGuestToken: (token) => set({ guestToken: token }),
 
+      // ─── Activity Log ────────────────────────────────────────
+      activityLogs: [],
+      setActivityLogs: (logs) => set({ activityLogs: logs }),
+
       // ─── Online Presence ───────────────────────────────────
       onlineUsers: [],
       setOnlineUsers: (users) => set({ onlineUsers: users }),
