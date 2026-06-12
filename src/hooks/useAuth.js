@@ -6,7 +6,6 @@ import {
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
-  signInAnonymously,
 } from 'firebase/auth'
 import { ref, set, get, onValue } from 'firebase/database'
 import { auth, db } from '../firebase'
@@ -37,11 +36,9 @@ export function useAuth() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user && !user.isAnonymous) {
-        // User login sebagai admin (email/password)
         setAuthUser({ uid: user.uid, email: user.email, username: user.email.replace(FAKE_DOMAIN, '') })
         setAuthRole('admin')
       } else {
-        // Tidak login atau anonymous (guest) — cek token lokal
         const savedToken = localStorage.getItem('hao-guest-token')
         if (savedToken) {
           try {
@@ -50,9 +47,7 @@ export function useAuth() {
               setAuthRole('guest')
               setAuthUser(null)
             } else {
-              // Token sudah tidak valid (diganti admin)
               localStorage.removeItem('hao-guest-token')
-              if (user?.isAnonymous) await signOut(auth)
               setAuthRole('viewer')
               setAuthUser(null)
             }
@@ -76,12 +71,9 @@ export function useAuth() {
       const firebaseToken = snap.exists() ? snap.val() : null
       setGuestToken(firebaseToken)
 
-      // Kalau user sedang jadi guest, cek apakah tokennya masih valid
       const savedToken = localStorage.getItem('hao-guest-token')
       if (savedToken && firebaseToken !== savedToken) {
-        // Token diganti admin — turunkan ke viewer
         localStorage.removeItem('hao-guest-token')
-        if (auth.currentUser?.isAnonymous) signOut(auth).catch(() => {})
         setAuthRole('viewer')
         setAuthUser(null)
       }
@@ -89,13 +81,11 @@ export function useAuth() {
     return () => unsub()
   }, [])
 
-  // ── Register admin ──────────────────────────────────────────
   const register = useCallback(async (username, password, verifyCode) => {
     if (!username.trim())       return { ok: false, error: 'Username tidak boleh kosong' }
     if (username.includes('@')) return { ok: false, error: 'Username tidak boleh mengandung @' }
     if (password.length < 6)    return { ok: false, error: 'Password minimal 6 karakter' }
     if (verifyCode !== VERIFY_CODE) return { ok: false, error: 'Kode verifikasi salah' }
-
     try {
       await setPersistence(auth, browserLocalPersistence)
       await createUserWithEmailAndPassword(auth, toEmail(username), password)
@@ -106,11 +96,9 @@ export function useAuth() {
     }
   }, [])
 
-  // ── Login admin ─────────────────────────────────────────────
   const login = useCallback(async (username, password) => {
     if (!username.trim()) return { ok: false, error: 'Username tidak boleh kosong' }
     if (!password)        return { ok: false, error: 'Password tidak boleh kosong' }
-
     try {
       await setPersistence(auth, browserLocalPersistence)
       await signInWithEmailAndPassword(auth, toEmail(username), password)
@@ -122,7 +110,6 @@ export function useAuth() {
     }
   }, [])
 
-  // ── Logout admin ────────────────────────────────────────────
   const logout = useCallback(async () => {
     try {
       await signOut(auth)
@@ -133,23 +120,12 @@ export function useAuth() {
     }
   }, [])
 
-  // ── Login guest via token ───────────────────────────────────
   const loginGuest = useCallback(async (token) => {
     if (!token.trim()) return { ok: false, error: 'Token tidak boleh kosong' }
-
     try {
       const snap = await get(ref(db, TOKEN_PATH))
       if (!snap.exists()) return { ok: false, error: 'Belum ada token aktif' }
       if (snap.val() !== token.trim()) return { ok: false, error: 'Token tidak valid' }
-
-      // Sign in anonymously ke Firebase supaya auth != null terpenuhi
-      // (guest perlu write access ke automations, status, dll)
-      try {
-        await signInAnonymously(auth)
-      } catch (anonErr) {
-        console.warn('[Auth] Anonymous sign-in gagal:', anonErr.message)
-        // Lanjut saja — mungkin Anonymous Auth belum diaktifkan di Firebase Console
-      }
 
       localStorage.setItem('hao-guest-token', token.trim())
       setAuthRole('guest')
@@ -160,23 +136,14 @@ export function useAuth() {
     }
   }, [])
 
-  // ── Logout guest ────────────────────────────────────────────
-  const logoutGuest = useCallback(async () => {
+  const logoutGuest = useCallback(() => {
     localStorage.removeItem('hao-guest-token')
-    // Sign out dari anonymous session kalau ada
-    try {
-      if (auth.currentUser?.isAnonymous) await signOut(auth)
-    } catch (err) {
-      console.warn('[Auth] Gagal sign out anonymous:', err.message)
-    }
     setAuthRole('viewer')
     setAuthUser(null)
   }, [])
 
-  // ── Create token baru (admin only) ─────────────────────────
   const createToken = useCallback(async () => {
     if (authRole !== 'admin') return { ok: false, error: 'Hanya admin yang bisa buat token' }
-
     try {
       const token = genToken()
       await set(ref(db, TOKEN_PATH), token)

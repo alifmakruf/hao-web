@@ -43,7 +43,7 @@ const GAS_POS = [-0.236, 0.62, -0.465]
 
 export function HouseModel({ onReady }) {
   const { scene } = useGLTF('/untitled4444.glb')
-  const { devices, mode, notifs, sensor, sensorRuangan, authRole } = useHAOStore()
+  const { devices, mode, notifs, sensor, sensorRuangan, authRole, onlineUsers } = useHAOStore()
   const { toggleDevice } = useDeviceStatus()
   const originalMaterials = useRef({})
 
@@ -187,6 +187,71 @@ export function HouseModel({ onReady }) {
           💨 {gasStyle.label}
         </div>
       </Html>
+
+      {/* Avatar user online — floating di halaman depan */}
+      {onlineUsers.map((user) => (
+        <Html
+          key={user.uid}
+          position={user.pos ?? [0, 0.05, 2.0]}
+          center
+          style={{ pointerEvents: 'none' }}
+        >
+          <div style={{
+            display:        'flex',
+            flexDirection:  'column',
+            alignItems:     'center',
+            gap:            3,
+            animation:      'hao-float 2.5s ease-in-out infinite',
+          }}>
+            {/* Avatar circle */}
+            <div style={{
+              width:        32,
+              height:       32,
+              borderRadius: '50%',
+              background:   user.role === 'admin'
+                ? 'linear-gradient(135deg, #1D9E75, #185FA5)'
+                : 'linear-gradient(135deg, #63b8ff, #9b59ff)',
+              border:       `2px solid ${user.role === 'admin' ? '#1D9E75' : '#63b8ff'}`,
+              boxShadow:    `0 0 10px ${user.role === 'admin' ? '#1D9E7588' : '#63b8ff88'}`,
+              display:      'flex',
+              alignItems:   'center',
+              justifyContent: 'center',
+              fontSize:     14,
+            }}>
+              {user.role === 'admin' ? '👑' : '👤'}
+            </div>
+            {/* Label */}
+            <div style={{
+              background:   'rgba(0,0,0,0.75)',
+              backdropFilter: 'blur(6px)',
+              color:        user.role === 'admin' ? '#1D9E75' : '#63b8ff',
+              fontSize:     9,
+              fontWeight:   700,
+              fontFamily:   'sans-serif',
+              padding:      '2px 7px',
+              borderRadius: 10,
+              border:       `1px solid ${user.role === 'admin' ? 'rgba(29,158,117,0.4)' : 'rgba(99,184,255,0.4)'}`,
+              whiteSpace:   'nowrap',
+            }}>
+              {user.label}
+            </div>
+            {/* Online dot */}
+            <div style={{
+              width:      6,
+              height:     6,
+              borderRadius: '50%',
+              background: '#22c55e',
+              boxShadow:  '0 0 5px #22c55e',
+            }} />
+          </div>
+          <style>{`
+            @keyframes hao-float {
+              0%, 100% { transform: translateY(0px); }
+              50%       { transform: translateY(-5px); }
+            }
+          `}</style>
+        </Html>
+      ))}
 
       {/* Notifikasi ala The Sims — tidak diubah */}
       {notifs.map((notif) => (

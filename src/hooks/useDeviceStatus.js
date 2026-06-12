@@ -1,20 +1,8 @@
 import { useEffect } from 'react'
 import { ref, onValue, set } from 'firebase/database'
-import { signInAnonymously } from 'firebase/auth'
-import { db, auth } from '../firebase'
+import { db } from '../firebase'
 import { useHAOStore } from '../store'
 import { publishCommand, publishMode } from './useMQTT'
-
-async function ensureAuth() {
-  if (auth.currentUser) return true
-  try {
-    await signInAnonymously(auth)
-    return true
-  } catch (err) {
-    console.warn('[Auth] ensureAuth gagal:', err.message)
-    return false
-  }
-}
 
 const DEVICE_KEYS = [
   'lampu_ruangtamu', 'lampu_dapurdankeluarga',
@@ -124,7 +112,6 @@ export function useDeviceStatus() {
     // 4. Update Firebase — admin dan guest (guest sudah anonymous auth)
     if (canWrite) {
       try {
-        await ensureAuth()
         await set(ref(db, `hao/status/${deviceKey}`), newState)
       } catch (err) {
         console.warn('[Firebase] Gagal update:', err.message)
@@ -146,7 +133,6 @@ export function useDeviceStatus() {
     publishMode(newMode)
 
     try {
-      await ensureAuth()
       await set(ref(db, 'hao/status/mode'), newMode)
     } catch (err) {
       console.warn('[Firebase] Gagal simpan mode:', err.message)

@@ -1,21 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { ref, onValue, set, push, remove, update } from 'firebase/database'
-import { signInAnonymously } from 'firebase/auth'
-import { db, auth } from '../firebase'
+import { db } from '../firebase'
 import { useHAOStore } from '../store'
 import { publishCommand } from './useMQTT'
-
-// Pastikan ada auth session sebelum write — penting untuk guest (anonymous)
-async function ensureAuth() {
-  if (auth.currentUser) return true
-  try {
-    await signInAnonymously(auth)
-    return true
-  } catch (err) {
-    console.warn('[Auth] ensureAuth gagal:', err.message)
-    return false
-  }
-}
 
 const TZ_OFFSET = { WIB: 7, WITA: 8, WIT: 9 }
 
@@ -230,7 +217,6 @@ export function useAutomation() {
   // ── CRUD Automations ─────────────────────────────────────────
   const addAutomation = async (rule) => {
     try {
-      await ensureAuth()
       await push(ref(db, 'hao/automations'), { ...rule, enabled: true, createdAt: Date.now() })
       return true
     } catch (err) { console.error('[Automation] Add:', err.message); return false }
@@ -238,7 +224,6 @@ export function useAutomation() {
 
   const updateAutomation = async (id, updates) => {
     try {
-      await ensureAuth()
       await update(ref(db, `hao/automations/${id}`), updates)
       return true
     } catch (err) { console.error('[Automation] Update:', err.message); return false }
@@ -246,7 +231,6 @@ export function useAutomation() {
 
   const deleteAutomation = async (id) => {
     try {
-      await ensureAuth()
       await remove(ref(db, `hao/automations/${id}`))
       return true
     } catch (err) { console.error('[Automation] Delete:', err.message); return false }
@@ -258,7 +242,6 @@ export function useAutomation() {
   // ── CRUD Preset Suhu ─────────────────────────────────────────
   const addTempPreset = async (preset) => {
     try {
-      await ensureAuth()
       await push(ref(db, 'hao/tempPresets'), { ...preset, createdAt: Date.now() })
       return true
     } catch (err) { console.error('[TempPreset] Add:', err.message); return false }
@@ -266,7 +249,6 @@ export function useAutomation() {
 
   const deleteTempPreset = async (id) => {
     try {
-      await ensureAuth()
       await remove(ref(db, `hao/tempPresets/${id}`))
       return true
     } catch (err) { console.error('[TempPreset] Delete:', err.message); return false }
@@ -274,7 +256,6 @@ export function useAutomation() {
 
   const updateTempPreset = async (id, updates) => {
     try {
-      await ensureAuth()
       await update(ref(db, `hao/tempPresets/${id}`), updates)
       return true
     } catch (err) { console.error('[TempPreset] Update:', err.message); return false }

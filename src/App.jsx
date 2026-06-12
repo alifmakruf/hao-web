@@ -36,6 +36,7 @@ import { AuthPanel }  from './components/ui/AuthPanel'
 import { GuestPanel } from './components/ui/GuestPanel'
 import { TokenPanel } from './components/ui/TokenPanel'
 import { useAuth }    from './hooks/useAuth'
+import { usePresence } from './hooks/usePresence'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -91,6 +92,7 @@ function AppInitializer() {
   useDeviceStatus()
   useSimsNotif()
   useAutomation()
+  usePresence()
   return null
 }
 
