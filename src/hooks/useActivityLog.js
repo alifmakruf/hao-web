@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
-import { ref, onValue, push, query, limitToLast } from 'firebase/database'
+import { ref, onValue, push, query, limitToLast, get, remove } from 'firebase/database'
 import { db } from '../firebase'
 import { useHAOStore } from '../store'
 
 const LOG_PATH  = 'hao/logs'
-const MAX_LOGS  = 100 // jumlah log terbaru yang disubscribe
+const MAX_LOGS  = 50 // jumlah maksimal log yang disimpan — terlama otomatis terhapus
 
 // Label device yang enak dibaca
 const DEVICE_LABELS = {
@@ -48,8 +48,34 @@ export async function pushActivityLog(entry) {
       actorName: actor.name,
       timestamp: Date.now(),
     })
+
+    // Hapus log terlama kalau total melebihi MAX_LOGS
+    await trimOldLogs()
   } catch (err) {
     console.warn('[ActivityLog] Gagal push:', err.message)
+  }
+}
+
+// Hapus entri tertua jika jumlah log melebihi MAX_LOGS
+async function trimOldLogs() {
+  try {
+    const snap = await get(ref(db, LOG_PATH))
+    if (!snap.exists()) return
+
+    const entries = Object.entries(snap.val())
+    if (entries.length <= MAX_LOGS) return
+
+    // Urutkan dari yang terlama (timestamp terkecil)
+    entries.sort((a, b) => (a[1]?.timestamp ?? 0) - (b[1]?.timestamp ?? 0))
+
+    const excess = entries.length - MAX_LOGS
+    const toDelete = entries.slice(0, excess)
+
+    await Promise.all(
+      toDelete.map(([id]) => remove(ref(db, `${LOG_PATH}/${id}`)))
+    )
+  } catch (err) {
+    console.warn('[ActivityLog] Gagal trim log lama:', err.message)
   }
 }
 
