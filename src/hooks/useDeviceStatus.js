@@ -1,8 +1,20 @@
 import { useEffect } from 'react'
 import { ref, onValue, set } from 'firebase/database'
-import { db } from '../firebase'
+import { signInAnonymously } from 'firebase/auth'
+import { db, auth } from '../firebase'
 import { useHAOStore } from '../store'
 import { publishCommand, publishMode } from './useMQTT'
+
+async function ensureAuth() {
+  if (auth.currentUser) return true
+  try {
+    await signInAnonymously(auth)
+    return true
+  } catch (err) {
+    console.warn('[Auth] ensureAuth gagal:', err.message)
+    return false
+  }
+}
 
 const DEVICE_KEYS = [
   'lampu_ruangtamu', 'lampu_dapurdankeluarga',
@@ -13,6 +25,9 @@ const DEVICE_KEYS = [
 
 // Pelacak key yang sedang "in-flight" (optimistic update belum confirmed Firebase)
 const pendingKeys = new Set()
+
+// Pelacak apakah mode sedang pending write — cegah Firebase listener override balik
+let pendingMode = false
 
 export function useDeviceStatus() {
   const {
@@ -39,7 +54,9 @@ export function useDeviceStatus() {
         })
         if (Object.keys(devices).length > 0)
           setDevices((prev) => ({ ...prev, ...devices }))
-        if (data.mode)   setMode(data.mode)
+
+        // Jangan override mode kalau sedang pending write dari user
+        if (data.mode && !pendingMode) setMode(data.mode)
         if (data.alasan) setAlasan(data.alasan)
         setFirebaseConnected(true)
       }, (err) => {
@@ -57,10 +74,8 @@ export function useDeviceStatus() {
 
         setSensor({ suhu, ldr, gas })
 
-        // Fallback semua ruangan pakai nilai global
-        // (akan di-override oleh hao/sensor_ruangan kalau ada)
         setSensorRuangan('ruangtamu', { suhu })
-        setSensorRuangan('kamar',     { suhu }) // ← fix: ini yang sebelumnya kurang
+        setSensorRuangan('kamar',     { suhu })
         setSensorRuangan('dapur',     { suhu })
       }, (err) => {
         console.warn('[Firebase] Sensor error:', err.message)
@@ -92,7 +107,7 @@ export function useDeviceStatus() {
       return
     }
     const newState = state.devices?.[deviceKey] === 'ON' ? 'OFF' : 'ON'
-    const isAdmin = state.authRole === 'admin'
+    const canWrite = state.authRole === 'admin' || state.authRole === 'guest'
 
     // 1. Tandai key sebagai pending — Firebase onValue tidak akan override state ini
     pendingKeys.add(deviceKey)
@@ -106,9 +121,10 @@ export function useDeviceStatus() {
       console.warn(`[HAO] MQTT tidak connect — ${deviceKey} masuk antrian`)
     }
 
-    // 4. Update Firebase — hanya kalau admin (guest tidak punya write permission ke status)
-    if (isAdmin) {
+    // 4. Update Firebase — admin dan guest (guest sudah anonymous auth)
+    if (canWrite) {
       try {
+        await ensureAuth()
         await set(ref(db, `hao/status/${deviceKey}`), newState)
       } catch (err) {
         console.warn('[Firebase] Gagal update:', err.message)
@@ -117,21 +133,27 @@ export function useDeviceStatus() {
       }
     }
 
-    // 5. Hapus dari pending setelah delay singkat — biarkan Firebase sync selesai
-    //    Untuk guest, lebih lama karena Firebase tidak diupdate (ESP yang update balik)
+    // 5. Hapus dari pending setelah delay singkat
     setTimeout(() => {
       pendingKeys.delete(deviceKey)
-    }, isAdmin ? 1500 : 3000)
+    }, 1500)
   }
 
   const changeMode = async (newMode) => {
+    // Set pending flag — cegah Firebase listener override mode sebelum write selesai
+    pendingMode = true
     setMode(newMode)
+    publishMode(newMode)
+
     try {
+      await ensureAuth()
       await set(ref(db, 'hao/status/mode'), newMode)
     } catch (err) {
       console.warn('[Firebase] Gagal simpan mode:', err.message)
+    } finally {
+      // Lepas pending setelah write selesai (atau gagal)
+      setTimeout(() => { pendingMode = false }, 2000)
     }
-    publishMode(newMode)
   }
 
   return { toggleDevice, changeMode }
