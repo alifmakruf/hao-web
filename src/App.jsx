@@ -608,6 +608,7 @@ export default function App() {
                   Perangkat
                 </div>
                 <DeviceCard />
+                <div style={{marginTop: 100}}>-----</div>
               </div>
             </div>
           </div>
@@ -855,8 +856,8 @@ export default function App() {
                 )}
               </div>
             </div>
-
-            <div style={{ height: 20 }} />
+            
+            <div style={{ height: 20, marginTop: 100 }} />
           </div>
         </div>
 
