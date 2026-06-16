@@ -40,6 +40,7 @@ import { usePresence } from './hooks/usePresence'
 import { WeatherWidget } from './components/ui/WeatherWidget'
 import { useActivityLog } from './hooks/useActivityLog'
 import { ActivityLogModal } from './components/ui/ActivityLogModal'
+import { VoiceControl }    from './components/ui/VoiceControl'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -974,6 +975,9 @@ export default function App() {
 
         {/* ── Toast notifikasi ── */}
         <NotifToast />
+
+        {/* ── Voice Control ── */}
+        <VoiceControl />
       </>
     )}
       <style>{`
