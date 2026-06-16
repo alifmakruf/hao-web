@@ -291,7 +291,7 @@ function ConnectionStatus() {
 
 // ── App utama ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const { firebaseConnected, liteMode, setLiteMode, authRole } = useHAOStore()
+  const { firebaseConnected, liteMode, setLiteMode, hideNotif, setHideNotif, authRole } = useHAOStore()
   const { login, logout, loginGuest, logoutGuest, createToken } = useAuth()
   const [sceneReady, setSceneReady] = useState(false)
   const [loadingDone,  setLoadingDone]  = useState(false)
@@ -778,6 +778,44 @@ export default function App() {
                 </div>
                 <div style={{ marginLeft: 'auto', width: 28, height: 16, borderRadius: 8, background: liteMode ? '#63b8ff' : 'rgba(255,255,255,0.15)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
                   <div style={{ position: 'absolute', top: 2, left: liteMode ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                </div>
+              </button>
+
+              {/* ── Hide Notif ── */}
+              <button
+                onClick={() => setHideNotif(!hideNotif)}
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: 10, marginTop: 6,
+                  background: hideNotif ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${hideNotif ? 'rgba(167,139,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                  color: hideNotif ? '#a78bfa' : 'rgba(255,255,255,0.6)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {/* Eye icon with optional slash */}
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                  {hideNotif ? (
+                    <>
+                      <path d="M1 1l14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <path d="M6.5 3.2C7 3.07 7.5 3 8 3c3.5 0 6 4 6 4s-.7 1.2-1.9 2.3M3.6 5.6C2.4 6.7 2 8 2 8s2.5 4 6 4c1.1 0 2-.3 2.8-.7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="8" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.4"/>
+                    </>
+                  ) : (
+                    <>
+                      <path d="M2 8s2.5-4 6-4 6 4 6 4-2.5 4-6 4-6-4-6-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="8" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.4"/>
+                    </>
+                  )}
+                </svg>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600 }}>Sembunyikan Notif</div>
+                  <div style={{ fontSize: 10, opacity: 0.6 }}>
+                    {hideNotif ? 'Aktif — indikator jadi ikon kecil' : 'Nonaktif — label penuh tampil'}
+                  </div>
+                </div>
+                <div style={{ marginLeft: 'auto', width: 28, height: 16, borderRadius: 8, background: hideNotif ? '#a78bfa' : 'rgba(255,255,255,0.15)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: 2, left: hideNotif ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                 </div>
               </button>
             </div>

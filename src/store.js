@@ -82,6 +82,10 @@ export const useHAOStore = create(
       liteMode: false,
       setLiteMode: (v) => set({ liteMode: v }),
 
+      // ─── Hide Notif (sembunyikan indikator di denah) ──────────
+      hideNotif: false,
+      setHideNotif: (v) => set({ hideNotif: v }),
+
       // ─── Auth ──────────────────────────────────────────────
       // 'viewer' | 'guest' | 'admin'
       authRole: 'viewer',
@@ -106,6 +110,7 @@ export const useHAOStore = create(
       partialize: (state) => ({
         mode:     state.mode,
         liteMode: state.liteMode,
+        hideNotif: state.hideNotif,
         timezone: state.timezone,
         // authRole tidak di-persist — ditentukan ulang saat mount via onAuthStateChanged
       }),

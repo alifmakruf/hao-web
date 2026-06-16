@@ -1,5 +1,6 @@
 import { Html } from '@react-three/drei'
 import { useEffect, useState } from 'react'
+import { useHAOStore } from '../../store'
 
 const TYPE_STYLE = {
   danger:  { bg: '#FCEBEB', border: '#E24B4A', text: '#501313' },
@@ -13,6 +14,7 @@ const TYPE_STYLE = {
 export function SimsNotif({ notif }) {
   const [visible, setVisible] = useState(false)
   const [bounce,  setBounce]  = useState(false)
+  const hideNotif = useHAOStore((s) => s.hideNotif)
 
   useEffect(() => {
     const t1 = setTimeout(() => setVisible(true), 50)
@@ -25,24 +27,41 @@ export function SimsNotif({ notif }) {
 
   return (
     <Html position={notif.position || [0, 3, 0]} center zIndexRange={[0, 0]}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        background: style.bg,
-        border: `1.5px solid ${style.border}`,
-        color: style.text,
-        padding: '5px 10px', borderRadius: 20,
-        fontSize: 12, fontFamily: 'sans-serif', fontWeight: 500,
-        whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        transform: visible
-          ? bounce ? 'translateY(-4px) scale(1.05)' : 'translateY(0) scale(1)'
-          : 'translateY(10px) scale(0.8)',
-        opacity: visible ? 1 : 0,
-        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        pointerEvents: 'none', userSelect: 'none',
-      }}>
-        <span style={{ fontSize: 14 }}>{notif.icon}</span>
-        <span>{notif.message}</span>
-      </div>
+      {hideNotif ? (
+        /* ── Mode Tersembunyi: dot kecil di posisi sensor gas ── */
+        <div
+          title={notif.message}
+          style={{
+            width: 10, height: 10,
+            borderRadius: '50%',
+            background: style.border,
+            boxShadow: `0 0 6px ${style.border}cc`,
+            opacity: visible ? 1 : 0,
+            transition: 'opacity 0.3s',
+            pointerEvents: 'none',
+          }}
+        />
+      ) : (
+        /* ── Mode Normal: bubble penuh ── */
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: style.bg,
+          border: `1.5px solid ${style.border}`,
+          color: style.text,
+          padding: '5px 10px', borderRadius: 20,
+          fontSize: 12, fontFamily: 'sans-serif', fontWeight: 500,
+          whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          transform: visible
+            ? bounce ? 'translateY(-4px) scale(1.05)' : 'translateY(0) scale(1)'
+            : 'translateY(10px) scale(0.8)',
+          opacity: visible ? 1 : 0,
+          transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          pointerEvents: 'none', userSelect: 'none',
+        }}>
+          <span style={{ fontSize: 14 }}>{notif.icon}</span>
+          <span>{notif.message}</span>
+        </div>
+      )}
     </Html>
   )
 }
