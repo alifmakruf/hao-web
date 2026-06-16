@@ -1,32 +1,20 @@
 import { useEffect, useState } from 'react'
+import { Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudLightning, Wind, Droplets, Thermometer, CloudDrizzle, CloudFog } from 'lucide-react'
 
-// Mapping kode WMO Open-Meteo ke ikon dan label
-const WEATHER_CODES = {
-  0:  { icon: '☀️', label: 'Cerah' },
-  1:  { icon: '🌤️', label: 'Cerah Berawan' },
-  2:  { icon: '⛅', label: 'Berawan Sebagian' },
-  3:  { icon: '☁️', label: 'Berawan' },
-  45: { icon: '🌫️', label: 'Berkabut' },
-  48: { icon: '🌫️', label: 'Kabut Es' },
-  51: { icon: '🌦️', label: 'Gerimis Ringan' },
-  53: { icon: '🌦️', label: 'Gerimis' },
-  55: { icon: '🌧️', label: 'Gerimis Lebat' },
-  61: { icon: '🌧️', label: 'Hujan Ringan' },
-  63: { icon: '🌧️', label: 'Hujan' },
-  65: { icon: '🌧️', label: 'Hujan Lebat' },
-  71: { icon: '🌨️', label: 'Salju Ringan' },
-  73: { icon: '🌨️', label: 'Salju' },
-  75: { icon: '❄️', label: 'Salju Lebat' },
-  80: { icon: '🌦️', label: 'Hujan Lokal' },
-  81: { icon: '🌧️', label: 'Hujan Lokal Lebat' },
-  82: { icon: '⛈️', label: 'Hujan Sangat Lebat' },
-  95: { icon: '⛈️', label: 'Badai Petir' },
-  96: { icon: '⛈️', label: 'Badai Petir + Hujan Es' },
-  99: { icon: '⛈️', label: 'Badai Petir Hebat' },
-}
-
+// Mapping kode WMO Open-Meteo ke ikon Lucide dan label
 function getWeatherInfo(code) {
-  return WEATHER_CODES[code] ?? { icon: '🌡️', label: 'Tidak diketahui' }
+  if (code === 0)              return { Icon: Sun,            color: '#FFD43B', label: 'Cerah' }
+  if (code === 1)              return { Icon: CloudSun,       color: '#FFD43B', label: 'Cerah Berawan' }
+  if (code === 2)              return { Icon: CloudSun,       color: '#ADB5BD', label: 'Berawan Sebagian' }
+  if (code === 3)              return { Icon: Cloud,          color: '#868E96', label: 'Berawan' }
+  if (code === 45 || code === 48) return { Icon: CloudFog,   color: '#ADB5BD', label: code === 48 ? 'Kabut Es' : 'Berkabut' }
+  if (code >= 51 && code <= 55)   return { Icon: CloudDrizzle, color: '#74C0FC', label: code === 51 ? 'Gerimis Ringan' : code === 53 ? 'Gerimis' : 'Gerimis Lebat' }
+  if (code >= 61 && code <= 65)   return { Icon: CloudRain,  color: '#4DABF7', label: code === 61 ? 'Hujan Ringan' : code === 63 ? 'Hujan' : 'Hujan Lebat' }
+  if (code >= 71 && code <= 75)   return { Icon: CloudSnow,  color: '#A5D8FF', label: code === 71 ? 'Salju Ringan' : code === 73 ? 'Salju' : 'Salju Lebat' }
+  if (code === 80 || code === 81) return { Icon: CloudRain,  color: '#4DABF7', label: code === 80 ? 'Hujan Lokal' : 'Hujan Lokal Lebat' }
+  if (code === 82)             return { Icon: CloudLightning, color: '#E03131', label: 'Hujan Sangat Lebat' }
+  if (code >= 95)              return { Icon: CloudLightning, color: '#F03E3E', label: code === 95 ? 'Badai Petir' : code === 96 ? 'Badai + Hujan Es' : 'Badai Petir Hebat' }
+  return { Icon: Thermometer, color: '#868E96', label: 'Tidak diketahui' }
 }
 
 export function WeatherWidget() {
@@ -56,52 +44,31 @@ export function WeatherWidget() {
             )
             const geoData = await geoRes.json()
             const place = geoData.results?.[0]
-            if (place) {
-              setCity(place.name || place.admin1 || '')
-            }
+            if (place) setCity(place.name || place.admin1 || '')
           } catch {
             // Kalau gagal reverse geocode, biarkan kosong
           }
-        } catch (err) {
+        } catch {
           setError('Gagal memuat cuaca')
         }
       },
-      () => {
-        setError('Izin lokasi ditolak')
-      },
+      () => setError('Izin lokasi ditolak'),
       { timeout: 8000 }
     )
   }, [])
 
-  if (error) {
-    return (
-      <div style={{
-        padding: '10px 12px', borderRadius: 10,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        fontSize: 11, color: 'rgba(255,255,255,0.4)',
-        fontFamily: 'sans-serif', textAlign: 'center',
-      }}>
-        {error}
-      </div>
-    )
+  const loadingStyle = {
+    padding: '10px 12px', borderRadius: 10,
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    fontSize: 11, color: 'rgba(255,255,255,0.4)',
+    fontFamily: 'sans-serif', textAlign: 'center',
   }
 
-  if (!weather) {
-    return (
-      <div style={{
-        padding: '10px 12px', borderRadius: 10,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        fontSize: 11, color: 'rgba(255,255,255,0.4)',
-        fontFamily: 'sans-serif', textAlign: 'center',
-      }}>
-        Mendeteksi lokasi...
-      </div>
-    )
-  }
+  if (error)   return <div style={loadingStyle}>{error}</div>
+  if (!weather) return <div style={loadingStyle}>Mendeteksi lokasi...</div>
 
-  const { icon, label } = getWeatherInfo(weather.weather_code)
+  const { Icon, color, label } = getWeatherInfo(weather.weather_code)
 
   return (
     <div style={{
@@ -114,7 +81,7 @@ export function WeatherWidget() {
         <span style={{ fontSize: 12, fontWeight: 700, color: 'white' }}>
           {city || 'Lokasi Anda'}
         </span>
-        <span style={{ fontSize: 18 }}>{icon}</span>
+        <Icon size={22} color={color} strokeWidth={1.8} />
       </div>
 
       <div style={{
@@ -134,9 +101,16 @@ export function WeatherWidget() {
       <div style={{
         display: 'flex', gap: 12, marginTop: 6,
         fontSize: 10, color: 'rgba(255,255,255,0.4)',
+        alignItems: 'center',
       }}>
-        <span>💧 {weather.relative_humidity_2m}%</span>
-        <span>💨 {Math.round(weather.wind_speed_10m)} km/j</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Droplets size={11} strokeWidth={2} />
+          {weather.relative_humidity_2m}%
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Wind size={11} strokeWidth={2} />
+          {Math.round(weather.wind_speed_10m)} km/j
+        </span>
       </div>
     </div>
   )

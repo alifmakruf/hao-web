@@ -2,10 +2,11 @@ import { ref, set } from 'firebase/database'
 import { db } from '../firebase'
 import { useHAOStore } from '../store'
 import { publishCommand, publishMode } from './useMQTT'
+import { Sunrise, Moon, Clapperboard, DoorOpen, Siren, BookOpen } from 'lucide-react'
 
 const SCENE_CONFIGS = {
   morning: {
-    label: 'Pagi', icon: '🌅', desc: 'Semua lampu nyala, kipas mati',
+    label: 'Pagi', Icon: Sunrise, iconColor: '#FFD43B', desc: 'Semua lampu nyala, kipas mati',
     mode: 'manual',
     devices: {
       lampu_ruangtamu: 'ON', lampu_dapurdankeluarga: 'ON',
@@ -15,7 +16,7 @@ const SCENE_CONFIGS = {
     },
   },
   sleep: {
-    label: 'Tidur', icon: '🌙', desc: 'Semua lampu mati, kipas kamar nyala',
+    label: 'Tidur', Icon: Moon, iconColor: '#748FFC', desc: 'Semua lampu mati, kipas kamar nyala',
     mode: 'manual',
     devices: {
       lampu_ruangtamu: 'OFF', lampu_dapurdankeluarga: 'OFF',
@@ -25,7 +26,7 @@ const SCENE_CONFIGS = {
     },
   },
   movie: {
-    label: 'Nonton', icon: '🎬', desc: 'Lampu redup, kipas ruang tamu nyala',
+    label: 'Nonton', Icon: Clapperboard, iconColor: '#F783AC', desc: 'Lampu redup, kipas ruang tamu nyala',
     mode: 'manual',
     devices: {
       lampu_ruangtamu: 'OFF', lampu_dapurdankeluarga: 'OFF',
@@ -35,7 +36,7 @@ const SCENE_CONFIGS = {
     },
   },
   leaving: {
-    label: 'Keluar Rumah', icon: '🚪', desc: 'Semua perangkat mati',
+    label: 'Keluar Rumah', Icon: DoorOpen, iconColor: '#63E6BE', desc: 'Semua perangkat mati',
     mode: 'manual',
     devices: {
       lampu_ruangtamu: 'OFF', lampu_dapurdankeluarga: 'OFF',
@@ -45,7 +46,7 @@ const SCENE_CONFIGS = {
     },
   },
   panic: {
-    label: 'Darurat', icon: '🚨', desc: 'Semua lampu nyala maksimal',
+    label: 'Darurat', Icon: Siren, iconColor: '#FF6B6B', desc: 'Semua lampu nyala maksimal',
     mode: 'manual',
     devices: {
       lampu_ruangtamu: 'ON', lampu_dapurdankeluarga: 'ON',
@@ -55,7 +56,7 @@ const SCENE_CONFIGS = {
     },
   },
   study: {
-    label: 'Belajar', icon: '📚', desc: 'Lampu kamar nyala, kipas nyala',
+    label: 'Belajar', Icon: BookOpen, iconColor: '#74C0FC', desc: 'Lampu kamar nyala, kipas nyala',
     mode: 'manual',
     devices: {
       lampu_ruangtamu: 'OFF', lampu_dapurdankeluarga: 'OFF',
@@ -85,7 +86,6 @@ export function useSceneSystem() {
       setActiveScene(sceneId)
 
       // 2. Tulis semua device + scene ke Firebase sekaligus
-      // Ini yang mencegah n8n override — n8n baca mode='manual' → skip
       try {
         const updates = {
           ...config.devices,
@@ -96,7 +96,6 @@ export function useSceneSystem() {
         await set(ref(db, 'hao/status'), updates)
       } catch (err) {
         console.warn('[Scene] Gagal tulis Firebase:', err.message)
-        // Tetap lanjut — MQTT masih bisa jalan
       }
 
       // 3. Kirim tiap device ke MQTT (untuk ESP32)
@@ -127,7 +126,6 @@ export function useSceneSystem() {
   const clearScene = async () => {
     try {
       setActiveScene(null)
-      // Hapus activeScene di Firebase juga
       await set(ref(db, 'hao/status/activeScene'), null)
     } catch (err) {
       console.warn('[Scene] Gagal clear scene:', err.message)

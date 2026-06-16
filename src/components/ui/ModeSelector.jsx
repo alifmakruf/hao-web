@@ -1,9 +1,10 @@
+import { Hand, Zap } from 'lucide-react'
 import { useHAOStore } from '../../store'
 import { useDeviceStatus } from '../../hooks/useDeviceStatus'
 
 const MODES = [
-  { id: 'manual', label: 'Manual',   desc: 'Kontrol langsung dari web', icon: '👆' },
-  { id: 'auto',   label: 'Otomatis', desc: 'Berdasarkan aturan setting', icon: '⚡' },
+  { id: 'manual', label: 'Manual',   desc: 'Kontrol langsung dari web', Icon: Hand },
+  { id: 'auto',   label: 'Otomatis', desc: 'Berdasarkan aturan setting', Icon: Zap  },
 ]
 
 export function ModeSelector() {
@@ -13,7 +14,7 @@ export function ModeSelector() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {MODES.map(({ id, label, desc, icon }) => {
+      {MODES.map(({ id, label, desc, Icon }) => {
         const isActive = mode === id
         return (
           <button
@@ -32,7 +33,11 @@ export function ModeSelector() {
               transition: 'all 0.2s', fontFamily: 'sans-serif',
             }}
           >
-            <span style={{ fontSize: 16 }}>{icon}</span>
+            <Icon
+              size={16}
+              strokeWidth={2}
+              color={isActive ? 'white' : 'rgba(255,255,255,0.5)'}
+            />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: isActive ? 600 : 400 }}>{label}</div>
               <div style={{ fontSize: 11, opacity: 0.6 }}>{desc}</div>

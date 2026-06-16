@@ -1,3 +1,4 @@
+import { Thermometer, Sun, Wind } from 'lucide-react'
 import { useHAOStore } from '../../store'
 
 function getTempColor(v) {
@@ -6,18 +7,18 @@ function getTempColor(v) {
 function getTempBg(v) {
   return v > 32 ? '#FAECE7' : v > 29 ? '#FAEEDA' : v < 20 ? '#E6F1FB' : '#E1F5EE'
 }
- 
+
 const SENSOR_CONFIG = [
   {
-    key: 'ldr', label: 'Cahaya', icon: '☀',
-    // FIX: LDR DO HIGH=gelap(nilai rendah 100), LOW=terang(nilai tinggi 800)
-    // jadi nilai rendah = gelap, nilai tinggi = terang
-    getColor: (v) => v >= 500 ? '#EF9F27' : v < 500 ? '#1D9E75' : '#534AB7',
-    getBg:    (v) => v >= 500 ? '#FAEEDA' : v < 500 ? '#E1F5EE' : '#EEEDFE',
-    format:   (v) => v >= 500 ? 'Terang'  : v < 500 ? 'Normal'  : 'Gelap',
+    key: 'ldr', label: 'Cahaya',
+    Icon: Sun,
+    getColor: (v) => v >= 500 ? '#EF9F27' : '#1D9E75',
+    getBg:    (v) => v >= 500 ? '#FAEEDA' : '#E1F5EE',
+    format:   (v) => v >= 500 ? 'Terang'  : 'Normal',
   },
   {
-    key: 'gas', label: 'Gas', icon: '💨',
+    key: 'gas', label: 'Gas',
+    Icon: Wind,
     getColor: (v) => v > 800 ? '#E24B4A' : v > 400 ? '#EF9F27' : '#1D9E75',
     getBg:    (v) => v > 800 ? '#FCEBEB' : v > 400 ? '#FAEEDA' : '#E1F5EE',
     format:   (v) => v > 800 ? 'Bahaya!' : v > 400 ? 'Waspada' : 'Aman',
@@ -47,7 +48,8 @@ export function SensorPanel() {
           fontFamily: 'sans-serif', marginBottom: 8,
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
-          🌡 Suhu Ruangan
+          <Thermometer size={13} strokeWidth={2} />
+          Suhu Ruangan
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {TEMP_ROOMS.map(({ key, label }) => {
@@ -75,7 +77,7 @@ export function SensorPanel() {
       </div>
 
       {/* LDR dan Gas */}
-      {SENSOR_CONFIG.map(({ key, label, icon, getColor, getBg, format }) => {
+      {SENSOR_CONFIG.map(({ key, label, Icon, getColor, getBg, format }) => {
         const value = sensor[key] ?? 0
         const color = getColor(value)
         const bg    = getBg(value)
@@ -87,7 +89,7 @@ export function SensorPanel() {
             justifyContent: 'space-between', gap: 8,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16 }}>{icon}</span>
+              <Icon size={16} color={color} strokeWidth={2} />
               <span style={{ fontSize: 12, fontWeight: 500, color, fontFamily: 'sans-serif' }}>
                 {label}
               </span>

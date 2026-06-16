@@ -1,3 +1,4 @@
+import { Lightbulb, Wind } from 'lucide-react'
 import { useHAOStore } from '../../store'
 import { useDeviceStatus } from '../../hooks/useDeviceStatus'
 import { ref, set } from 'firebase/database'
@@ -6,33 +7,51 @@ import { publishCommand } from '../../hooks/useMQTT'
 import { logBulkToggle } from '../../hooks/useActivityLog'
 
 const DEVICES = [
-  { key: 'lampu_ruangtamu',        label: 'Lampu Ruang Tamu',  icon: '💡' },
-  { key: 'lampu_dapurdankeluarga', label: 'Lampu Dapur',       icon: '💡' },
-  { key: 'lampu_kamar1',           label: 'Lampu Kamar 1',     icon: '💡' },
-  { key: 'lampu_kamar2',           label: 'Lampu Kamar 2',     icon: '💡' },
-  { key: 'lampu_kamar3',           label: 'Lampu Kamar 3',     icon: '💡' },
-  { key: 'lampu_teras',            label: 'Lampu Teras',       icon: '💡' },
-  { key: 'lampu_gerbang',          label: 'Lampu Gerbang',     icon: '💡' },
-  { key: 'lampu_garasi',           label: 'Lampu Garasi',      icon: '💡' },
-  { key: 'fan_ruangtamu',          label: 'Kipas Ruang Tamu',  icon: '🌀' },
-  { key: 'fan_kamar',              label: 'Kipas Kamar',       icon: '🌀' },
-  { key: 'fan_dapur',              label: 'Kipas Dapur',       icon: '🌀' },
+  { key: 'lampu_ruangtamu',        label: 'Lampu Ruang Tamu',  type: 'lampu' },
+  { key: 'lampu_dapurdankeluarga', label: 'Lampu Dapur',       type: 'lampu' },
+  { key: 'lampu_kamar1',           label: 'Lampu Kamar 1',     type: 'lampu' },
+  { key: 'lampu_kamar2',           label: 'Lampu Kamar 2',     type: 'lampu' },
+  { key: 'lampu_kamar3',           label: 'Lampu Kamar 3',     type: 'lampu' },
+  { key: 'lampu_teras',            label: 'Lampu Teras',       type: 'lampu' },
+  { key: 'lampu_gerbang',          label: 'Lampu Gerbang',     type: 'lampu' },
+  { key: 'lampu_garasi',           label: 'Lampu Garasi',      type: 'lampu' },
+  { key: 'fan_ruangtamu',          label: 'Kipas Ruang Tamu',  type: 'fan'   },
+  { key: 'fan_kamar',              label: 'Kipas Kamar',       type: 'fan'   },
+  { key: 'fan_dapur',              label: 'Kipas Dapur',       type: 'fan'   },
 ]
 
-const LAMP_KEYS = DEVICES.filter(d => d.key.startsWith('lampu')).map(d => d.key)
-const FAN_KEYS  = DEVICES.filter(d => d.key.startsWith('fan')).map(d => d.key)
+const LAMP_KEYS = DEVICES.filter(d => d.type === 'lampu').map(d => d.key)
+const FAN_KEYS  = DEVICES.filter(d => d.type === 'fan').map(d => d.key)
+
+function DeviceIcon({ type, isOn, size = 20 }) {
+  if (type === 'lampu') {
+    return (
+      <Lightbulb
+        size={size}
+        color={isOn ? '#fbbf24' : 'rgba(255,255,255,0.25)'}
+        fill={isOn ? '#fbbf2440' : 'none'}
+        strokeWidth={1.8}
+        style={{ transition: 'color 0.3s, fill 0.3s' }}
+      />
+    )
+  }
+  return (
+    <Wind
+      size={size}
+      color={isOn ? '#60cfff' : 'rgba(255,255,255,0.25)'}
+      strokeWidth={1.8}
+      style={{ transition: 'color 0.3s' }}
+    />
+  )
+}
 
 export function DeviceCard() {
   const { devices, mode, setDevices, authRole } = useHAOStore()
   const { toggleDevice } = useDeviceStatus()
   const isManual = mode === 'manual'
 
-  // BUG FIX 1: canControl harus dipakai di semua disabled/onClick
-  // BUG FIX 2: viewer tidak boleh interaksi sama sekali (bukan hanya disabled visual)
   const canControl = authRole === 'admin' || authRole === 'guest'
-
-  // Tombol bisa diklik hanya jika: bisa kontrol DAN mode manual
-  const canClick = canControl && isManual
+  const canClick   = canControl && isManual
 
   const allLampsOn = LAMP_KEYS.every(k => devices[k] === 'ON')
   const allFansOn  = FAN_KEYS.every(k => devices[k] === 'ON')
@@ -67,7 +86,6 @@ export function DeviceCard() {
     }
   }
 
-  // Banner info sesuai kondisi
   const getBanner = () => {
     if (!canControl) return {
       text: 'Login untuk mengontrol perangkat',
@@ -117,7 +135,7 @@ export function DeviceCard() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           }}
         >
-          <span>💡</span>
+          <Lightbulb size={13} color={allLampsOn ? '#fbbf24' : 'currentColor'} strokeWidth={2} />
           <span>{allLampsOn ? 'Matikan Semua' : 'Nyalakan Semua'}</span>
         </button>
 
@@ -136,14 +154,14 @@ export function DeviceCard() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           }}
         >
-          <span>🌀</span>
+          <Wind size={13} color={allFansOn ? '#60cfff' : 'currentColor'} strokeWidth={2} />
           <span>{allFansOn ? 'Matikan Semua' : 'Nyalakan Semua'}</span>
         </button>
       </div>
 
       {/* Grid device individual */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-        {DEVICES.map(({ key, label, icon }) => {
+        {DEVICES.map(({ key, label, type }) => {
           const isOn = devices[key] === 'ON'
           return (
             <button
@@ -154,23 +172,25 @@ export function DeviceCard() {
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 4,
                 padding: '10px 8px',
-                background: isOn ? 'rgba(255,220,100,0.2)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${isOn ? 'rgba(255,200,80,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                background: isOn
+                  ? type === 'lampu' ? 'rgba(255,220,100,0.2)' : 'rgba(100,200,255,0.2)'
+                  : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${isOn
+                  ? type === 'lampu' ? 'rgba(255,200,80,0.5)' : 'rgba(100,200,255,0.5)'
+                  : 'rgba(255,255,255,0.1)'}`,
                 borderRadius: 10, color: 'white',
                 cursor: canClick ? 'pointer' : 'not-allowed',
                 opacity: canClick ? 1 : 0.5,
                 transition: 'all 0.2s', fontFamily: 'sans-serif',
               }}
             >
-              <span style={{
-                fontSize: 20,
-                filter: isOn ? 'none' : 'grayscale(1) opacity(0.4)',
-                transition: 'filter 0.3s',
-              }}>{icon}</span>
+              <DeviceIcon type={type} isOn={isOn} size={20} />
               <span style={{ fontSize: 10, opacity: 0.8, textAlign: 'center' }}>{label}</span>
               <span style={{
                 fontSize: 10, fontWeight: 700,
-                color: isOn ? '#fbbf24' : 'rgba(255,255,255,0.4)',
+                color: isOn
+                  ? type === 'lampu' ? '#fbbf24' : '#60cfff'
+                  : 'rgba(255,255,255,0.4)',
               }}>{isOn ? 'ON' : 'OFF'}</span>
             </button>
           )

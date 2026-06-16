@@ -1,3 +1,4 @@
+import { Users } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useHAOStore } from '../../store'
@@ -22,7 +23,7 @@ export function GuestPanel({ onClose }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontFamily: 'sans-serif' }}>
         <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(99,184,255,0.1)', border: '1px solid rgba(99,184,255,0.25)' }}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Login sebagai</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#63b8ff' }}>👥 Guest</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#63b8ff' }}><Users size={13} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:5}} />Guest</div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Akses: semua fitur kecuali Create Token</div>
         </div>
         <button

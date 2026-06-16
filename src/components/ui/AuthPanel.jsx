@@ -1,3 +1,4 @@
+import { UserCircle, Lock, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useHAOStore } from '../../store'
@@ -73,7 +74,7 @@ export function AuthPanel({ onClose }) {
         <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(29,158,117,0.12)', border: '1px solid rgba(29,158,117,0.3)' }}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Login sebagai</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#1D9E75' }}>
-            👤 {authUser?.username ?? 'Admin'}
+            <UserCircle size={14} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:5}} />{authUser?.username ?? 'Admin'}
           </div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Role: Administrator</div>
         </div>
@@ -89,10 +90,10 @@ export function AuthPanel({ onClose }) {
       {/* Tab header */}
       <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 9, padding: 3 }}>
         <button style={sectionStyle(tab === 'login')} onClick={() => { setTab('login'); setLoginErr('') }}>
-          🔐 Login
+          <Lock size={11} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:4}} />Login
         </button>
         <button style={sectionStyle(tab === 'regis')} onClick={() => { setTab('regis'); setRegErr('') }}>
-          📝 Registrasi
+          <UserPlus size={11} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:4}} />Registrasi
         </button>
       </div>
 

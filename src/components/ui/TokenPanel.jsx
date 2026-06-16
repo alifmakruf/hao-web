@@ -1,3 +1,4 @@
+import { AlertTriangle, KeyRound } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useHAOStore } from '../../store'
@@ -34,7 +35,7 @@ export function TokenPanel({ onClose }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontFamily: 'sans-serif' }}>
       <div style={{ fontSize: 10, color: 'rgba(255,200,80,0.8)', padding: '5px 8px', background: 'rgba(255,200,80,0.07)', borderRadius: 7, border: '1px solid rgba(255,200,80,0.2)' }}>
-        ⚠ Generate token baru akan menghapus token lama. Guest yang sedang aktif akan di-kick otomatis.
+        <AlertTriangle size={11} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:4}} />Generate token baru akan menghapus token lama. Guest yang sedang aktif akan di-kick otomatis.
       </div>
 
       {/* Token aktif */}
@@ -86,7 +87,7 @@ export function TokenPanel({ onClose }) {
           fontSize: 12, cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600,
           transition: 'all 0.2s',
         }}>
-        {loading ? 'Membuat Token...' : '🔑 Generate Token Baru'}
+        {loading ? 'Membuat Token...' : <><KeyRound size={13} strokeWidth={2} style={{display:'inline',verticalAlign:'middle',marginRight:5}} />Generate Token Baru</>}
       </button>
     </div>
   )

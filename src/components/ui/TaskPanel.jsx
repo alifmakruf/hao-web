@@ -1,3 +1,4 @@
+import { ClipboardList, Trash2, Check, X, Pencil, Plus } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'hao-tasks'
@@ -138,7 +139,7 @@ export function TaskPanel({ onClose }) {
       }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>
-            📋 Task Harian
+            <ClipboardList size={14} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:5}} />Task Harian
           </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
             {doneCount}/{totalCount} selesai
@@ -246,7 +247,7 @@ export function TaskPanel({ onClose }) {
               ) : (
                 <>
                   <button onClick={() => startEdit(task)}  style={iconBtn('rgba(255,255,255,0.3)')}>✏</button>
-                  <button onClick={() => deleteTask(task.id)} style={iconBtn('#E24B4A')}>🗑</button>
+                  <button onClick={() => deleteTask(task.id)} style={iconBtn('#E24B4A')}><Trash2 size={11} strokeWidth={2} /></button>
                 </>
               )}
             </div>

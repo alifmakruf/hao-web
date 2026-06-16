@@ -1,3 +1,4 @@
+import { Flame, Thermometer, Snowflake, Skull, AlertTriangle, Wind, Crown, User } from 'lucide-react'
 import { useGLTF, Html } from '@react-three/drei'
 import { useRef, useEffect } from 'react'
 import * as THREE from 'three'
@@ -105,7 +106,7 @@ export function HouseModel({ onReady }) {
     return {
       color:   isHot ? '#D85A30' : isWarm ? '#EF9F27' : '#1D9E75',
       bg:      isHot ? 'rgba(216,90,48,0.88)' : isWarm ? 'rgba(239,159,39,0.88)' : 'rgba(29,158,117,0.88)',
-      icon:    isHot ? '🔥' : isWarm ? '🌡' : '❄',
+      Icon:    isHot ? Flame : isWarm ? Thermometer : Snowflake,
     }
   }
 
@@ -114,7 +115,8 @@ export function HouseModel({ onReady }) {
   const gasStyle = {
     color: gasVal > 100 ? '#E24B4A' : gasVal > 40 ? '#EF9F27' : '#1D9E75',
     bg:    gasVal > 100 ? 'rgba(226,75,74,0.88)' : gasVal > 40 ? 'rgba(239,159,39,0.88)' : 'rgba(29,158,117,0.88)',
-    label: gasVal > 100 ? '☠ Bahaya!' : gasVal > 40 ? '⚠ Waspada' : '✓ Aman',
+    GasIcon: gasVal > 100 ? Skull : gasVal > 40 ? AlertTriangle : Wind,
+    label: gasVal > 100 ? 'Bahaya!' : gasVal > 40 ? 'Waspada' : 'Aman',
   }
 
   return (
@@ -140,7 +142,7 @@ export function HouseModel({ onReady }) {
       {/* Label suhu per ruangan — tepat di posisi mesh DHT */}
       {ROOM_TEMP_LABELS.map(({ key, label, pos }) => {
         const suhu = sensorRuangan?.[key]?.suhu ?? sensor.suhu
-        const { color, bg, icon } = getTempStyle(suhu)
+        const { color, bg, Icon } = getTempStyle(suhu)
         return (
           <Html
             key={key}
@@ -160,7 +162,7 @@ export function HouseModel({ onReady }) {
               fontWeight:   600,
               boxShadow:    `0 0 8px ${color}55`,
             }}>
-              {icon} {suhu.toFixed(1)}°C
+              <Icon size={11} strokeWidth={2} style={{display:'inline',verticalAlign:'middle',marginRight:3}} />{suhu.toFixed(1)}°C
             </div>
           </Html>
         )
@@ -184,7 +186,7 @@ export function HouseModel({ onReady }) {
           fontWeight:   600,
           boxShadow:    `0 0 8px ${gasStyle.color}55`,
         }}>
-          💨 {gasStyle.label}
+          <gasStyle.GasIcon size={11} strokeWidth={2} style={{display:'inline',verticalAlign:'middle',marginRight:3}} />{gasStyle.label}
         </div>
       </Html>
 
@@ -218,7 +220,7 @@ export function HouseModel({ onReady }) {
               justifyContent: 'center',
               fontSize:     14,
             }}>
-              {user.role === 'admin' ? '👑' : '👤'}
+              {user.role === 'admin' ? <Crown size={14} color='white' strokeWidth={2} /> : <User size={14} color='white' strokeWidth={2} />}
             </div>
             {/* Label */}
             <div style={{

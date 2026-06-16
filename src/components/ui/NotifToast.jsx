@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Skull, Flame } from 'lucide-react'
 import { useHAOStore } from '../../store'
 
 // Toast notification yang muncul di pojok kanan atas
@@ -16,7 +17,7 @@ export function NotifToast() {
         type: 'danger',
         title: 'Bahaya Gas!',
         body: `Kadar gas sangat tinggi: ${sensor.gas}. Ventilasi ruangan segera!`,
-        icon: '☠',
+        Icon: Skull,
       })
     }
     if (sensor.suhu > 35) {
@@ -25,7 +26,7 @@ export function NotifToast() {
         type: 'warning',
         title: 'Suhu Ekstrem',
         body: `Suhu mencapai ${sensor.suhu.toFixed(1)}°C. Kipas dinyalakan otomatis.`,
-        icon: '🔥',
+        Icon: Flame,
       })
     }
 
@@ -45,30 +46,34 @@ export function NotifToast() {
       gap: 8,
       maxWidth: 280,
     }}>
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          style={{
-            display: 'flex',
-            gap: 10,
-            padding: '10px 14px',
-            background: toast.type === 'danger'
-              ? 'rgba(226,75,74,0.95)'
-              : 'rgba(186,117,23,0.95)',
-            borderRadius: 12,
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            animation: 'slideIn 0.3s ease',
-            fontFamily: 'sans-serif',
-          }}
-        >
-          <span style={{ fontSize: 20, flexShrink: 0 }}>{toast.icon}</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>{toast.title}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{toast.body}</div>
+      {toasts.map((toast) => {
+        const { Icon } = toast
+        return (
+          <div
+            key={toast.id}
+            style={{
+              display: 'flex',
+              gap: 10,
+              padding: '10px 14px',
+              background: toast.type === 'danger'
+                ? 'rgba(226,75,74,0.95)'
+                : 'rgba(186,117,23,0.95)',
+              borderRadius: 12,
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              animation: 'slideIn 0.3s ease',
+              fontFamily: 'sans-serif',
+              alignItems: 'flex-start',
+            }}
+          >
+            <Icon size={20} color="white" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>{toast.title}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{toast.body}</div>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
       <style>{`@keyframes slideIn { from { opacity:0; transform:translateX(20px) } to { opacity:1; transform:translateX(0) } }`}</style>
     </div>
   )

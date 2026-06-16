@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { useSceneSystem, SCENE_CONFIGS } from '../../hooks/useSceneSystem'
 
 export function SceneSelector() {
@@ -56,6 +57,7 @@ export function SceneSelector() {
           const isActive  = activeScene === id
           const isLoading = loading === id
           const isPanic   = id === 'panic'
+          const { Icon, iconColor } = cfg
 
           return (
             <button
@@ -80,13 +82,13 @@ export function SceneSelector() {
                 opacity: isLoading ? 0.6 : 1,
                 transition: 'all 0.2s',
                 fontFamily: 'sans-serif',
-                // Panic mode: animasi border merah
                 animation: isActive && isPanic ? 'panicPulse 1s infinite' : 'none',
               }}
             >
-              <span style={{ fontSize: 20 }}>
-                {isLoading ? '⏳' : cfg.icon}
-              </span>
+              {isLoading
+                ? <Loader2 size={20} color="rgba(255,255,255,0.6)" strokeWidth={2} style={{ animation: 'spin 0.8s linear infinite' }} />
+                : <Icon size={20} color={isActive ? iconColor : 'rgba(255,255,255,0.5)'} strokeWidth={1.8} />
+              }
               <span style={{ fontSize: 11, fontWeight: isActive ? 700 : 400 }}>
                 {cfg.label}
               </span>
@@ -129,6 +131,10 @@ export function SceneSelector() {
         @keyframes panicPulse {
           0%, 100% { border-color: rgba(226,75,74,0.6); box-shadow: none; }
           50%       { border-color: rgba(226,75,74,1);   box-shadow: 0 0 12px rgba(226,75,74,0.4); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
         }
       `}</style>
     </div>

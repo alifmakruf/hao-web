@@ -1,14 +1,14 @@
 import { useEffect, useState, useRef } from 'react'
 
 const TIPS = [
-  '💡 Lampu otomatis menyala saat LDR mendeteksi gelap',
-  '☠ Sensor gas akan membunyikan peringatan darurat',
-  '🔄 Mode Auto mengikuti kondisi sensor secara real-time',
-  '🧠 Mode Adaptif belajar dari pola waktu dan sensor',
-  '🏠 Klik mesh 3D untuk toggle lampu secara langsung',
-  '🌙 Malam hari, threshold lampu lebih sensitif',
-  '📡 Data sensor dikirim via MQTT dari ESP32',
-  '⚡ n8n memproses logika otomasi di balik layar',
+  '• Lampu otomatis menyala saat LDR mendeteksi gelap',
+  '• Sensor gas akan membunyikan peringatan darurat',
+  '• Mode Auto mengikuti kondisi sensor secara real-time',
+  '• Mode Adaptif belajar dari pola waktu dan sensor',
+  '• Klik mesh 3D untuk toggle lampu secara langsung',
+  '• Malam hari, threshold lampu lebih sensitif',
+  '• Data sensor dikirim via MQTT dari ESP32',
+  '• n8n memproses logika otomasi di balik layar',
 ]
 
 function Logo({ pulse }) {

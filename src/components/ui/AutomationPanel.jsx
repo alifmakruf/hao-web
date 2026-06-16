@@ -1,16 +1,17 @@
+import { Lightbulb, Wind, Clock, Sun, Thermometer, Cloud, Pencil, Trash2, Lock, Zap, ListChecks } from 'lucide-react'
 import { useState } from 'react'
 import { useHAOStore } from '../../store'
 import { useAutomation } from '../../hooks/useAutomation'
 
 const LAMP_DEVICES = [
-  { key: 'lampu_ruangtamu',        label: 'Lampu Ruang Tamu', icon: '💡' },
-  { key: 'lampu_dapurdankeluarga', label: 'Lampu Dapur',      icon: '💡' },
-  { key: 'lampu_kamar1',           label: 'Lampu Kamar 1',    icon: '💡' },
-  { key: 'lampu_kamar2',           label: 'Lampu Kamar 2',    icon: '💡' },
-  { key: 'lampu_kamar3',           label: 'Lampu Kamar 3',    icon: '💡' },
-  { key: 'lampu_teras',            label: 'Lampu Teras',      icon: '💡' },
-  { key: 'lampu_gerbang',          label: 'Lampu Gerbang',    icon: '💡' },
-  { key: 'lampu_garasi',           label: 'Lampu Garasi',     icon: '💡' },
+  { key: 'lampu_ruangtamu',        label: 'Lampu Ruang Tamu' },
+  { key: 'lampu_dapurdankeluarga', label: 'Lampu Dapur' },
+  { key: 'lampu_kamar1',           label: 'Lampu Kamar 1' },
+  { key: 'lampu_kamar2',           label: 'Lampu Kamar 2' },
+  { key: 'lampu_kamar3',           label: 'Lampu Kamar 3' },
+  { key: 'lampu_teras',            label: 'Lampu Teras' },
+  { key: 'lampu_gerbang',          label: 'Lampu Gerbang' },
+  { key: 'lampu_garasi',           label: 'Lampu Garasi' },
 ]
 
 const FAN_DEVICES = [
@@ -21,7 +22,7 @@ const FAN_DEVICES = [
 
 const ALL_DEVICES = [
   ...LAMP_DEVICES,
-  ...FAN_DEVICES.map(f => ({ key: f.key, label: f.label, icon: '🌀' })),
+  ...FAN_DEVICES.map(f => ({ key: f.key, label: f.label, type: 'fan' })),
 ]
 
 const ROOM_LABELS = { ruangtamu: 'Ruang Tamu', kamar: 'Kamar', dapur: 'Dapur' }
@@ -143,23 +144,27 @@ function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
     <div style={{ padding: '12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${isEdit ? 'rgba(99,184,255,0.3)' : 'rgba(255,255,255,0.1)'}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
       {isEdit && (
-        <div style={{ fontSize: 11, color: 'rgba(99,184,255,0.8)', marginBottom: -2 }}>✏️ Edit Aturan</div>
+        <div style={{ fontSize: 11, color: 'rgba(99,184,255,0.8)', marginBottom: -2 }}><Pencil size={11} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:4}} />Edit Aturan</div>
       )}
 
       {/* Tipe — hanya tampil saat tambah baru */}
       {!isEdit && (
         <div style={{ display: 'flex', gap: 5 }}>
           {[
-            { t: 'time', label: '⏰ Waktu' },
-            { t: 'ldr',  label: '☀ Cahaya' },
-            { t: 'temp', label: '🌡 Suhu' },
-          ].map(({ t, label }) => (
+            { t: 'time', label: 'Waktu',  Icon: Clock },
+            { t: 'ldr',  label: 'Cahaya', Icon: Sun },
+            { t: 'temp', label: 'Suhu',   Icon: Thermometer },
+          ].map(({ t, label, Icon }) => (
             <button key={t} onClick={() => switchType(t)} style={{
               flex: 1, padding: '6px', borderRadius: 8, fontSize: 11,
               background: formType === t ? 'rgba(99,184,255,0.2)' : 'rgba(255,255,255,0.05)',
               border: `1px solid ${formType === t ? 'rgba(99,184,255,0.5)' : 'rgba(255,255,255,0.1)'}`,
               color: 'white', cursor: 'pointer',
-            }}>{label}</button>
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              fontFamily: 'sans-serif',
+            }}>
+              <Icon size={12} strokeWidth={2} style={{ flexShrink: 0 }} />{label}
+            </button>
           ))}
         </div>
       )}
@@ -209,7 +214,7 @@ function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
           <div>
             <div style={labelStyle}>Perangkat yang Nyala</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-              {ALL_DEVICES.map(({ key, label, icon }) => {
+              {ALL_DEVICES.map(({ key, label, type }) => {
                 const sel = form.devices?.includes(key)
                 return (
                   <button key={key} onClick={() => toggleDevice(key)} style={{
@@ -218,8 +223,13 @@ function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
                     border: `1px solid ${sel ? '#1D9E75' : 'rgba(255,255,255,0.08)'}`,
                     color: sel ? '#1D9E75' : 'rgba(255,255,255,0.5)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    fontFamily: 'sans-serif',
                   }}>
-                    <span>{icon}</span><span style={{ fontSize: 9 }}>{label}</span>
+                    {type === 'fan'
+                      ? <Wind size={10} strokeWidth={2} style={{ flexShrink: 0 }} />
+                      : <Lightbulb size={10} strokeWidth={2} style={{ flexShrink: 0 }} />
+                    }
+                    <span style={{ fontSize: 9 }}>{label}</span>
                   </button>
                 )
               })}
@@ -239,8 +249,13 @@ function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
                   flex: 1, padding: '6px', borderRadius: 8, fontSize: 12,
                   background: form.condition === c ? 'rgba(239,159,39,0.2)' : 'rgba(255,255,255,0.05)',
                   border: `1px solid ${form.condition === c ? '#EF9F27' : 'rgba(255,255,255,0.1)'}`,
-                  color: form.condition === c ? '#EF9F27' : 'rgba(255,255,255,0.5)', cursor: 'pointer',
-                }}>{c === 'cerah' ? '☀ Cerah' : '☁ Mendung'}</button>
+                  color: form.condition === c ? '#EF9F27' : 'rgba(255,255,255,0.5)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  fontFamily: 'sans-serif',
+                }}>
+                  {c === 'cerah' ? <Sun size={12} strokeWidth={2} /> : <Cloud size={12} strokeWidth={2} />}
+                  {c === 'cerah' ? 'Cerah' : 'Mendung'}
+                </button>
               ))}
             </div>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Aktif pukul 06:00–18:30</div>
@@ -257,8 +272,10 @@ function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
                     border: `1px solid ${sel ? '#1D9E75' : 'rgba(255,255,255,0.08)'}`,
                     color: sel ? '#1D9E75' : 'rgba(255,255,255,0.5)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    fontFamily: 'sans-serif',
                   }}>
-                    <span>💡</span><span style={{ fontSize: 9 }}>{label}</span>
+                    <Lightbulb size={10} strokeWidth={2} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 9 }}>{label}</span>
                   </button>
                 )
               })}
@@ -281,7 +298,7 @@ function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
                   color: form.fanKey === key ? '#63b8ff' : 'rgba(255,255,255,0.6)', cursor: 'pointer',
                   display: 'flex', justifyContent: 'space-between',
                 }}>
-                  <span>🌀 {label}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Wind size={12} strokeWidth={2} />{label}</span>
                   <span style={{ fontSize: 10, opacity: 0.6 }}>DHT: {ROOM_LABELS[room]}</span>
                 </button>
               ))}
@@ -306,7 +323,7 @@ function AutomationForm({ editRule, onSave, onCancel, tempPresets }) {
                       color: form.presetId === p.id ? '#EF9F27' : 'rgba(255,255,255,0.6)', cursor: 'pointer',
                       display: 'flex', justifyContent: 'space-between',
                     }}>
-                      <span>🌡 {p.name}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Thermometer size={12} strokeWidth={2} />{p.name}</span>
                       <span style={{ fontSize: 10, opacity: 0.7 }}>&gt;{thresh}°C</span>
                     </button>
                   )
@@ -394,7 +411,7 @@ function AutomationTab() {
 
       {/* Note */}
       <div style={{ padding: '6px 10px', borderRadius: 8, fontSize: 11, background: 'rgba(99,184,255,0.08)', border: '1px solid rgba(99,184,255,0.2)', color: 'rgba(99,184,255,0.8)' }}>
-        ⚡ Prioritas: Waktu &gt; Cahaya &gt; Suhu. Device tidak termasuk aturan → bisa dikontrol manual.
+        <Zap size={11} strokeWidth={2} style={{display:'inline',verticalAlign:'middle',marginRight:4}} />Prioritas: Waktu &gt; Cahaya &gt; Suhu. Device tidak termasuk aturan → bisa dikontrol manual.
       </div>
 
       {mode !== 'auto' && (
@@ -423,7 +440,7 @@ function AutomationTab() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'white', marginBottom: 2 }}>
-                    {rule.type === 'time' ? '⏰' : rule.type === 'ldr' ? '☀' : '🌡'} {rule.name}
+                    {rule.type === 'time' ? <Clock size={10} strokeWidth={2} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> : rule.type === 'ldr' ? <Sun size={10} strokeWidth={2} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> : <Thermometer size={10} strokeWidth={2} style={{display:'inline',verticalAlign:'middle',marginRight:4}} />}{rule.name}
                   </div>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
                     {rule.type === 'time' && `${fmtTime(rule.startHour, rule.startMinute)} – ${fmtTime(rule.endHour, rule.endMinute)} · ${fmtDays(rule.days)}`}
@@ -449,12 +466,12 @@ function AutomationTab() {
                     width: 28, height: 28, borderRadius: 7, border: 'none',
                     background: 'rgba(99,184,255,0.12)', color: '#63b8ff',
                     cursor: 'pointer', fontSize: 13,
-                  }}>✏️</button>
+                  }}><Pencil size={13} strokeWidth={2} /></button>
                   {/* Delete */}
                   <button onClick={() => deleteAutomation(rule.id)} title="Hapus" style={{
                     width: 28, height: 28, borderRadius: 7, border: 'none',
                     background: 'rgba(226,75,74,0.15)', color: '#E24B4A', cursor: 'pointer', fontSize: 13,
-                  }}>🗑</button>
+                  }}><Trash2 size={13} strokeWidth={2} /></button>
                 </div>
               </div>
             </div>
@@ -478,7 +495,7 @@ function AutomationTab() {
           padding: '8px', borderRadius: 10,
           background: canControl ? 'rgba(29,158,117,0.15)' : 'rgba(255,255,255,0.05)', border: `1px dashed ${canControl ? 'rgba(29,158,117,0.4)' : 'rgba(255,255,255,0.15)'}`,
           color: canControl ? '#1D9E75' : 'rgba(255,255,255,0.3)', cursor: canControl ? 'pointer' : 'not-allowed', fontSize: 12,
-        }}>{canControl ? '+ Tambah Aturan' : '🔒 Login untuk menambah aturan'}</button>
+        }}>{canControl ? '+ Tambah Aturan' : <><Lock size={11} strokeWidth={2} style={{display:'inline',verticalAlign:'middle',marginRight:4}} />Login untuk menambah aturan</>}</button>
       )}
 
       {/* Form tambah baru */}
@@ -540,7 +557,7 @@ function PresetTab() {
 
   const PresetForm = ({ isEdit }) => (
     <div style={{ padding: '12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${isEdit ? 'rgba(99,184,255,0.3)' : 'rgba(255,255,255,0.1)'}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {isEdit && <div style={{ fontSize: 11, color: 'rgba(99,184,255,0.8)', marginBottom: -2 }}>✏️ Edit Preset</div>}
+      {isEdit && <div style={{ fontSize: 11, color: 'rgba(99,184,255,0.8)', marginBottom: -2 }}><Pencil size={11} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:4}} />Edit Preset</div>}
       <div>
         <div style={labelStyle}>Nama Preset</div>
         <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -606,7 +623,7 @@ function PresetTab() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'white', marginBottom: 4 }}>
-                    🌡 {p.name}
+                    <Thermometer size={11} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:4}} />{p.name}
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {Object.entries(p.threshold || {}).map(([room, val]) => (
@@ -626,12 +643,12 @@ function PresetTab() {
                     width: 28, height: 28, borderRadius: 7, border: 'none',
                     background: 'rgba(99,184,255,0.12)', color: '#63b8ff',
                     cursor: 'pointer', fontSize: 13,
-                  }}>✏️</button>
+                  }}><Pencil size={13} strokeWidth={2} /></button>
                   <button onClick={() => deleteTempPreset(p.id)} title="Hapus" style={{
                     width: 28, height: 28, borderRadius: 7, border: 'none',
                     background: 'rgba(226,75,74,0.15)', color: '#E24B4A',
                     cursor: 'pointer', fontSize: 13, flexShrink: 0,
-                  }}>🗑</button>
+                  }}><Trash2 size={13} strokeWidth={2} /></button>
                 </div>
               </div>
             </div>
@@ -661,16 +678,17 @@ export function AutomationPanel() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'sans-serif' }}>
       <div style={{ display: 'flex', gap: 5, background: 'rgba(255,255,255,0.04)', borderRadius: 9, padding: 3 }}>
         {[
-          { id: 'rules',   label: '⚡ Aturan' },
-          { id: 'presets', label: '🌡 Preset Suhu' },
-        ].map(({ id, label }) => (
+          { id: 'rules',   label: 'Aturan',     Icon: Zap },
+          { id: 'presets', label: 'Preset Suhu', Icon: Thermometer },
+        ].map(({ id, label, Icon }) => (
           <button key={id} onClick={() => setTab(id)} style={{
             flex: 1, padding: '6px', borderRadius: 7, fontSize: 11,
             background: tab === id ? 'rgba(255,255,255,0.12)' : 'transparent',
             border: 'none', color: tab === id ? 'white' : 'rgba(255,255,255,0.4)',
             cursor: 'pointer', fontWeight: tab === id ? 600 : 400,
             transition: 'all 0.2s',
-          }}>{label}</button>
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          }}><Icon size={11} strokeWidth={2} />{label}</button>
         ))}
       </div>
 

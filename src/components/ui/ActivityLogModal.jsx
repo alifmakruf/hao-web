@@ -1,3 +1,4 @@
+import { ScrollText } from 'lucide-react'
 import { useHAOStore } from '../../store'
 
 const ROLE_COLORS = {
@@ -60,7 +61,7 @@ export function ActivityLogModal({ onClose }) {
         }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'white' }}>
-              📜 Log Aktivitas
+              <ScrollText size={15} strokeWidth={2} style={{display:"inline",verticalAlign:"middle",marginRight:6}} />Log Aktivitas
             </div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
               Riwayat perubahan oleh admin & guest
