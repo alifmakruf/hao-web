@@ -13,6 +13,9 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars } from '@react-three/drei'
 import { Suspense, useState, useRef, useEffect } from 'react'
 
+import './hao-animations.css'
+import { GlobalEffects } from './components/ui/GlobalEffects'
+
 import { HouseModel }    from './components/scene/HouseModel'
 import { SkyBackground } from './components/scene/SkyBackground'
 import { SensorPanel }   from './components/ui/SensorPanel'
@@ -41,6 +44,7 @@ import { WeatherWidget } from './components/ui/WeatherWidget'
 import { useActivityLog } from './hooks/useActivityLog'
 import { ActivityLogModal } from './components/ui/ActivityLogModal'
 import { VoiceControl } from './components/ui/VoiceControl'
+import { SidebarParticles } from './components/ui/SidebarParticles'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -444,6 +448,9 @@ export default function App() {
 
       <AppInitializer />
 
+      {/* ── Global visual effects layer (award-style, pointer-events: none) ── */}
+      <GlobalEffects enabled={!liteMode} />
+
       {/* ── 3D Canvas ── */}
       <Canvas
         shadows={!liteMode}
@@ -489,6 +496,8 @@ export default function App() {
           zIndex: 99999,
           isolation: 'isolate'
         }}>
+          {/* Sidebar particles — menggantikan efek sword-slash shine */}
+          <SidebarParticles side="left" count={14} />
           <div style={{
             width: SIDEBAR_WIDTH,
             height: '100%',
@@ -498,7 +507,8 @@ export default function App() {
             display: 'flex', flexDirection: 'column',
             overflowY: 'auto',
             overflowX: 'hidden',
-          }}>
+            position: 'relative',
+          }} className="hao-sidebar-scan">
 
             {/* Header */}
             <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -705,6 +715,8 @@ export default function App() {
           transition: 'width 0.32s cubic-bezier(0.4,0,0.2,1)',
           zIndex: 99999,
         }}>
+          {/* Sidebar particles — menggantikan efek sword-slash shine */}
+          <SidebarParticles side="right" count={14} />
           <div style={{
             width: RIGHT_SIDEBAR_WIDTH,
             height: '100%',
@@ -713,7 +725,8 @@ export default function App() {
             borderLeft: '1px solid rgba(255,255,255,0.07)',
             display: 'flex', flexDirection: 'column',
             overflowY: 'auto', overflowX: 'hidden',
-          }}>
+            position: 'relative',
+          }} className="hao-sidebar-scan">
 
             {/* Header */}
             <div style={{ padding: '20px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>

@@ -1,0 +1,210 @@
+/**
+ * hao-animations.css — Optimized v2
+ * Fix: cursor hilang di sidebar, tombol gerak-gerak, performa berat
+ */
+
+/* ── Font ───────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+body, button, input, select, textarea {
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+}
+
+/* ── Custom cursor — ONLY on elements that are not sidebar/interactive ─── */
+/* Jangan pakai * { cursor: none } karena bikin cursor hilang di sidebar */
+@media (hover: hover) {
+  /* Hanya hide cursor default di canvas/scene area */
+  canvas { cursor: none !important; }
+}
+
+/* Custom scrollbar sidebar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(99,184,255,0.18);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99,184,255,0.4);
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+
+@keyframes hao-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+/* Entrance: fade up — NO blur (berat) */
+@keyframes hao-fade-up {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0);    }
+}
+
+/* Corner HUD in */
+@keyframes hao-corner-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Pulse ring SVG */
+@keyframes hao-pulse-ring {
+  0%   { opacity: 0.6; }
+  100% { r: 12; opacity: 0; }
+}
+
+/* Ambient orb drift — transform only, GPU-friendly */
+@keyframes hao-orb-drift {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(-50%, -50%) scale(1.12) translate(20px, -15px); }
+}
+
+/* Border glow */
+@keyframes hao-border-glow {
+  0%, 100% { box-shadow: 0 0 0   rgba(99,184,255,0); }
+  50%       { box-shadow: 0 0 12px rgba(99,184,255,0.18); }
+}
+
+/* Scan sweep */
+@keyframes hao-scan-sweep {
+  0%   { top: -2px;  opacity: 0.5; }
+  100% { top: 100%;  opacity: 0;   }
+}
+
+/* Rotate slow */
+@keyframes hao-rotate-slow {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+/* Shimmer */
+@keyframes hao-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* Pop */
+@keyframes hao-pop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  70%  { transform: scale(1.05); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* Loading particle */
+@keyframes hao-loading-particle {
+  0%   { transform: translateY(0)     scale(1);   opacity: 0;   }
+  10%  { opacity: 0.8; }
+  100% { transform: translateY(-70vh) scale(0.3); opacity: 0;   }
+}
+
+/* Glitch — ringan, jarang */
+@keyframes hao-glitch {
+  0%, 94%, 100% { transform: none; }
+  95%  { transform: translateX(-2px); }
+  96%  { transform: translateX(2px); }
+  97%  { transform: none; }
+}
+
+/* Text reveal — NO blur */
+@keyframes hao-text-reveal {
+  0%   { opacity: 0; letter-spacing: 0.4em; }
+  100% { opacity: 1; letter-spacing: 0.05em; }
+}
+
+/* Logo in — NO blur */
+@keyframes hao-logo-in {
+  0%   { opacity: 0; transform: translate(-50%,-50%) translateY(20px) scale(0.88); }
+  100% { opacity: 1; transform: translate(-50%,-50%) translateY(0) scale(1); }
+}
+
+@keyframes hao-logo-float {
+  0%, 100% { transform: translate(-50%,-50%) translateY(0px);  }
+  50%       { transform: translate(-50%,-50%) translateY(-6px); }
+}
+
+/* Tip fade */
+@keyframes hao-tip-reveal {
+  0%   { opacity: 0; transform: translateY(5px); }
+  15%  { opacity: 1; transform: translateY(0);   }
+  85%  { opacity: 1; transform: translateY(0);   }
+  100% { opacity: 0; transform: translateY(-5px);}
+}
+
+/* ── Loading screen classes ──────────────────────────────────────────────── */
+.hao-loading-logo  { animation: hao-fade-up 0.7s 0.1s ease both; }
+.hao-loading-title { animation: hao-text-reveal 0.6s 0.3s ease both; }
+.hao-loading-sub   { animation: hao-fade-up 0.5s 0.5s ease both; }
+.hao-loading-bar   { animation: hao-fade-up 0.5s 0.65s ease both; }
+.hao-loading-tips  { animation: hao-fade-up 0.5s 0.8s ease both; }
+.hao-glitch        { animation: hao-glitch 10s ease infinite; }
+
+/* ── Button micro-interactions ──────────────────────────────────────────── */
+/* PENTING: hanya apply ke tombol yang BUKAN toggle sidebar / nav kritis */
+/* Tidak pakai !important di transform supaya tidak override inline style */
+
+@media (hover: hover) {
+  /* Tombol umum — transisi warna saja, NO transform */
+  button {
+    transition:
+      background    0.18s ease,
+      border-color  0.18s ease,
+      box-shadow    0.18s ease,
+      opacity       0.15s ease !important;
+  }
+
+  /* Icon buttons di toolbar (38x38) — boleh scale kecil, NO translateY */
+  button[title]:not([style*="width: 20"]):not([style*="width:20"]) {
+    transition:
+      background    0.18s ease,
+      border-color  0.18s ease,
+      box-shadow    0.18s ease,
+      transform     0.15s ease !important;
+  }
+}
+
+/* ── Sidebar particle effect ─────────────────────────────────────────────── */
+
+/*
+ * Menggantikan efek sword-slash shine.
+ * Partikel melayang ke atas pelan-pelan, ringan di GPU.
+ * Animasi identik dengan LoadingScreen tapi durasi lebih panjang
+ * dan opacity lebih rendah agar tidak mengalihkan perhatian dari UI.
+ */
+
+@keyframes hao-sidebar-particle-rise {
+  0%   { transform: translateY(0)      scale(1);    opacity: 0;   }
+  8%   { opacity: 1; }
+  88%  { opacity: 0.5; }
+  100% { transform: translateY(-95vh)  scale(0.2);  opacity: 0;   }
+}
+
+@keyframes hao-sidebar-particle-edge {
+  0%, 100% { opacity: 0.1; }
+  50%       { opacity: 0.5; }
+}
+
+/* Tetap ada untuk backward compat (className di App.jsx) */
+.hao-sidebar-scan { position: relative; }
+
+/* ── Status glow ────────────────────────────────────────────────────────── */
+.hao-device-on {
+  animation: hao-border-glow 3s ease-in-out infinite;
+}
+
+/* ── Mobile: matikan semua animasi dekoratif ──────────────────────────── */
+@media (max-width: 768px) {
+  .hao-corner-hud,
+  .hao-cursor-dot,
+  .hao-cursor-ring,
+  .hao-orb-ambient { display: none !important; }
+
+  button { transition: background 0.12s ease !important; }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
