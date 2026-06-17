@@ -310,15 +310,16 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
           flexShrink: 0,
         }}>
 
-          {/* Tombol mic kecil (talk) */}
+          {/* Tombol mic kecil (push-to-talk) */}
           <button
-            onMouseDown={startListening}
-            onMouseUp={isListening ? stopListening : undefined}
-            onTouchStart={startListening}
-            onTouchEnd={isListening ? stopListening : undefined}
-            onClick={isListening ? stopListening : startListening}
+            onMouseDown={canControl ? startListening : undefined}
+            onMouseUp={canControl && isListening ? stopListening : undefined}
+            onMouseLeave={canControl && isListening ? stopListening : undefined}
+            onTouchStart={canControl ? (e) => { e.preventDefault(); startListening() } : undefined}
+            onTouchEnd={canControl && isListening ? (e) => { e.preventDefault(); stopListening() } : undefined}
+            onTouchCancel={canControl && isListening ? stopListening : undefined}
             disabled={!canControl}
-            title={isListening ? 'Berhenti' : 'Mulai bicara'}
+            title={isListening ? 'Lepas untuk kirim' : 'Tahan untuk bicara'}
             style={{
               flexShrink: 0,
               width: 34, height: 34,
@@ -335,6 +336,8 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
                 : canControl ? '0 2px 10px rgba(29,158,117,0.4)' : 'none',
               transition: 'all 0.2s',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
             }}
           >
             {isListening ? <PulseRing /> : <MicIcon size={15} color={canControl ? 'white' : 'rgba(255,255,255,0.3)'} />}
@@ -345,7 +348,7 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
             {/* Hint awal */}
             {!transcript && !response && !error && (
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {canControl ? 'Tekan mic & ucapkan perintah…' : '🔒 Login untuk mengontrol perangkat'}
+                {canControl ? 'Tahan mic untuk bicara…' : '🔒 Login untuk mengontrol perangkat'}
               </div>
             )}
 
@@ -438,31 +441,41 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
 
       {/* ── FAB mic utama ── */}
       <button
-        onClick={isOpen ? handleClose : handleOpen}
-        title="Kontrol Suara"
+        // Saat panel belum terbuka → klik buka panel
+        onClick={!isOpen ? handleOpen : undefined}
+        // Saat panel terbuka → push-to-talk
+        onMouseDown={isOpen && canControl ? startListening : undefined}
+        onMouseUp={isOpen && canControl && isListening ? stopListening : undefined}
+        onMouseLeave={isOpen && canControl && isListening ? stopListening : undefined}
+        onTouchStart={isOpen && canControl ? (e) => { e.preventDefault(); startListening() } : undefined}
+        onTouchEnd={isOpen && canControl && isListening ? (e) => { e.preventDefault(); stopListening() } : undefined}
+        onTouchCancel={isOpen && canControl && isListening ? stopListening : undefined}
+        title={!isOpen ? 'Buka Voice Control' : isListening ? 'Lepas untuk kirim' : 'Tahan untuk bicara'}
         style={{
           flexShrink: 0,
           width: FAB_SIZE, height: FAB_SIZE,
           borderRadius: '50%',
           border: 'none',
-          background: isOpen
-            ? 'linear-gradient(135deg, rgba(20,100,75,0.95), rgba(15,80,60,0.95))'
-            : 'linear-gradient(135deg, rgba(29,158,117,0.95), rgba(20,120,90,0.95))',
-          boxShadow: isOpen
-            ? '0 4px 20px rgba(29,158,117,0.3), 0 0 0 2px rgba(29,158,117,0.4)'
-            : '0 4px 20px rgba(29,158,117,0.5), 0 0 0 1px rgba(255,255,255,0.1)',
+          background: isListening
+            ? 'linear-gradient(135deg, rgba(220,50,50,0.95), rgba(180,30,30,0.95))'
+            : isOpen
+              ? 'linear-gradient(135deg, rgba(20,100,75,0.95), rgba(15,80,60,0.95))'
+              : 'linear-gradient(135deg, rgba(29,158,117,0.95), rgba(20,120,90,0.95))',
+          boxShadow: isListening
+            ? '0 0 0 4px rgba(220,50,50,0.35), 0 4px 20px rgba(220,50,50,0.4)'
+            : isOpen
+              ? '0 4px 20px rgba(29,158,117,0.3), 0 0 0 2px rgba(29,158,117,0.4)'
+              : '0 4px 20px rgba(29,158,117,0.5), 0 0 0 1px rgba(255,255,255,0.1)',
           cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all 0.2s',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
         }}
-        onMouseEnter={e => {
-          e.currentTarget.style.transform = 'scale(1.1)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform = 'scale(1)'
-        }}
+        onMouseEnter={e => { if (!isListening) e.currentTarget.style.transform = 'scale(1.1)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
       >
-        <MicIcon size={22} color="white" />
+        {isListening ? <PulseRing size={18} /> : <MicIcon size={22} color="white" />}
       </button>
     </div>
   )
