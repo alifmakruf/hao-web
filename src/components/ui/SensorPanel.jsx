@@ -14,7 +14,7 @@ const SENSOR_CONFIG = [
     Icon: Sun,
     getColor: (v) => v >= 500 ? '#EF9F27' : '#1D9E75',
     getBg:    (v) => v >= 500 ? '#FAEEDA' : '#E1F5EE',
-    format:   (v) => v >= 500 ? 'Terang'  : 'Normal',
+    format:   (v) => v >= 500 ? 'Terang'  : 'Gelap/Normal',
   },
   {
     key: 'gas', label: 'Gas',
