@@ -1,11 +1,3 @@
-/**
- * VoiceControl.jsx
- * FAB mic di tengah bawah.
- * Saat diklik → panel kecil horizontal muncul di samping kiri icon.
- * Panel setinggi icon (52px), memanjang ke kiri.
- * Membuka panel otomatis menutup sidebar kiri & kanan (via onOpenChange + onCloseSidebars).
- */
-
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { publishCommand, publishMode } from '../../hooks/useMQTT'
 import { useHAOStore } from '../../store'
@@ -23,6 +15,11 @@ const BOTTOM_OFFSET = 24
 function getPanelWidth() {
   const vw = typeof window !== 'undefined' ? window.innerWidth : 420
   return Math.min(420, vw - FAB_SIZE - PANEL_GAP - 32)
+}
+
+// Deteksi touch device
+function isTouchDevice() {
+  return typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 }
 
 // ── Mapping nama alias ke device key di store ────────────────────────────────
@@ -118,7 +115,11 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
   const [error,       setError]         = useState('')
   const [isOpen,      setIsOpen]        = useState(false)
   const [panelWidth,  setPanelWidth]    = useState(getPanelWidth)
+  const [isHovered,   setIsHovered]     = useState(false)
   const recognitionRef                   = useRef(null)
+  const isMouseDownRef                   = useRef(false)   // track apakah mouse benar-benar ditekan
+  const touchMovedRef                    = useRef(false)   // track apakah jari geser (scroll)
+  const finalTranscriptRef               = useRef('')      // simpan transkrip final di ref
   const { setMode, authRole } = useHAOStore()
 
   useEffect(() => {
@@ -134,7 +135,6 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
   }, [isOpen, onOpenChange])
 
   const handleOpen = () => {
-    // Tutup sidebar kiri & kanan sebelum buka panel
     onCloseSidebars?.()
     setIsOpen(true)
   }
@@ -143,63 +143,10 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
     setIsOpen(false)
     recognitionRef.current?.stop()
     setIsListening(false)
+    finalTranscriptRef.current = ''
   }
 
-  const startListening = useCallback(() => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      setError('Browser tidak mendukung Web Speech API. Coba Chrome.')
-      return
-    }
-
-    setError('')
-    setResponse(null)
-    setTranscript('')
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    const recognition = new SpeechRecognition()
-    recognitionRef.current = recognition
-
-    recognition.lang           = 'id-ID'
-    recognition.interimResults = true
-    recognition.maxAlternatives = 1
-    recognition.continuous     = false
-
-    recognition.onstart = () => setIsListening(true)
-
-    recognition.onresult = (event) => {
-      let interim = ''
-      let final   = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript
-        if (event.results[i].isFinal) final += t
-        else interim += t
-      }
-      setTranscript(final || interim)
-    }
-
-    recognition.onend = () => {
-      setIsListening(false)
-      setTranscript(prev => {
-        if (prev) processCommand(prev)
-        return prev
-      })
-    }
-
-    recognition.onerror = (ev) => {
-      setIsListening(false)
-      if (ev.error === 'no-speech')    setError('Tidak ada suara terdeteksi. Coba lagi.')
-      else if (ev.error === 'aborted') setError('Dibatalkan.')
-      else setError(`Error: ${ev.error}`)
-    }
-
-    recognition.start()
-  }, [canControl])
-
-  const stopListening = useCallback(() => {
-    recognitionRef.current?.stop()
-    setIsListening(false)
-  }, [])
-
+  // ── processCommand ────────────────────────────────────────────────────────
   const processCommand = useCallback(async (text) => {
     if (!canControl) {
       setResponse({ success: false, lines: ['⚠️ Anda tidak punya izin kontrol.'] })
@@ -261,9 +208,156 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
     setResponse({ success: hasSuccess, lines })
   }, [canControl, setMode])
 
+  // ── startListening ────────────────────────────────────────────────────────
+  const startListening = useCallback(() => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setError('Browser tidak mendukung Web Speech API. Coba Chrome.')
+      return
+    }
+
+    // Hentikan session sebelumnya jika ada
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort() } catch (_) {}
+      recognitionRef.current = null
+    }
+
+    setError('')
+    setResponse(null)
+    setTranscript('')
+    finalTranscriptRef.current = ''
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognitionRef.current = recognition
+
+    recognition.lang           = 'id-ID'
+    recognition.interimResults = true
+    recognition.maxAlternatives = 1
+    recognition.continuous     = false
+
+    recognition.onstart = () => setIsListening(true)
+
+    recognition.onresult = (event) => {
+      let interim = ''
+      let final   = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript
+        if (event.results[i].isFinal) final += t
+        else interim += t
+      }
+      const current = final || interim
+      setTranscript(current)
+      if (final) finalTranscriptRef.current = final
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+      const captured = finalTranscriptRef.current || ''
+      // Proses hanya jika ada transkrip
+      if (captured.trim()) {
+        processCommand(captured.trim())
+      }
+    }
+
+    recognition.onerror = (ev) => {
+      setIsListening(false)
+      // Jika ada transkrip sudah tertangkap, jangan tampilkan error
+      if (finalTranscriptRef.current.trim()) return
+
+      if (ev.error === 'no-speech') {
+        setError('Tidak ada suara terdeteksi. Coba lagi.')
+      } else if (ev.error === 'aborted') {
+        // Jangan tampilkan "Dibatalkan" — ini normal saat stop dipanggil manual
+      } else {
+        setError(`Error: ${ev.error}`)
+      }
+    }
+
+    recognition.start()
+  }, [canControl, processCommand])
+
+  // ── stopListening ─────────────────────────────────────────────────────────
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()  // stop (bukan abort) agar onend tetap dipanggil
+    }
+    setIsListening(false)
+  }, [])
+
+  // ── Toggle untuk mobile ───────────────────────────────────────────────────
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      stopListening()
+    } else {
+      startListening()
+    }
+  }, [isListening, startListening, stopListening])
+
+  // ── Handler mouse (desktop push-to-talk) ─────────────────────────────────
+  const handleMouseDown = useCallback((e) => {
+    if (!canControl) return
+    e.preventDefault()
+    isMouseDownRef.current = true
+    startListening()
+  }, [canControl, startListening])
+
+  const handleMouseUp = useCallback(() => {
+    if (!isMouseDownRef.current) return
+    isMouseDownRef.current = false
+    if (isListening) stopListening()
+  }, [isListening, stopListening])
+
+  // mouseLeave hanya stop jika mouse button masih ditekan (bukan hover biasa)
+  const handleMouseLeave = useCallback(() => {
+    if (isMouseDownRef.current && isListening) {
+      isMouseDownRef.current = false
+      stopListening()
+    }
+  }, [isMouseDownRef, isListening, stopListening])
+
+  // ── Handler touch (mobile toggle) ────────────────────────────────────────
+  const handleTouchStart = useCallback((e) => {
+    if (!canControl) return
+    e.preventDefault()
+    touchMovedRef.current = false
+  }, [canControl])
+
+  const handleTouchMove = useCallback(() => {
+    touchMovedRef.current = true  // jari geser = scroll, bukan tap
+  }, [])
+
+  const handleTouchEnd = useCallback((e) => {
+    if (!canControl) return
+    e.preventDefault()
+    // Abaikan jika jari bergeser (scroll)
+    if (touchMovedRef.current) return
+    toggleListening()
+  }, [canControl, toggleListening])
+
+  // ── Shared event props berdasarkan device ────────────────────────────────
+  const getMicProps = (forFAB = false) => {
+    const touch = isTouchDevice()
+    if (touch) {
+      return {
+        onTouchStart: handleTouchStart,
+        onTouchMove:  handleTouchMove,
+        onTouchEnd:   handleTouchEnd,
+      }
+    } else {
+      return {
+        onMouseDown:  handleMouseDown,
+        onMouseUp:    handleMouseUp,
+        onMouseLeave: handleMouseLeave,
+      }
+    }
+  }
+
+  // Label hint berdasarkan device
+  const micHint = isTouchDevice()
+    ? (isListening ? 'Ketuk lagi untuk kirim' : 'Ketuk untuk bicara')
+    : (isListening ? 'Lepas untuk kirim' : 'Tahan untuk bicara')
+
   // Total lebar gabungan panel + gap + FAB
-  // Saat tertutup → hanya FAB (52px), centered
-  // Saat terbuka  → panel + gap + FAB, semua group di-center
   const totalWidth = isOpen ? panelWidth + PANEL_GAP + FAB_SIZE : FAB_SIZE
 
   return (
@@ -272,7 +366,6 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
         position: 'fixed',
         bottom: BOTTOM_OFFSET,
         left: '50%',
-        // Geser group agar selalu centered
         transform: `translateX(-${totalWidth / 2}px)`,
         transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)',
         display: 'flex',
@@ -299,7 +392,7 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
           flexShrink: 0,
         }}
       >
-        {/* Inner panel — lebar fixed agar konten tidak squish saat animasi */}
+        {/* Inner panel */}
         <div style={{
           width: panelWidth,
           height: FAB_SIZE,
@@ -310,16 +403,11 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
           flexShrink: 0,
         }}>
 
-          {/* Tombol mic kecil (push-to-talk) */}
+          {/* Tombol mic kecil di panel */}
           <button
-            onMouseDown={canControl ? startListening : undefined}
-            onMouseUp={canControl && isListening ? stopListening : undefined}
-            onMouseLeave={canControl && isListening ? stopListening : undefined}
-            onTouchStart={canControl ? (e) => { e.preventDefault(); startListening() } : undefined}
-            onTouchEnd={canControl && isListening ? (e) => { e.preventDefault(); stopListening() } : undefined}
-            onTouchCancel={canControl && isListening ? stopListening : undefined}
+            {...getMicProps()}
             disabled={!canControl}
-            title={isListening ? 'Lepas untuk kirim' : 'Tahan untuk bicara'}
+            title={isListening ? 'Ketuk/lepas untuk kirim' : micHint}
             style={{
               flexShrink: 0,
               width: 34, height: 34,
@@ -338,17 +426,18 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               userSelect: 'none',
               WebkitUserSelect: 'none',
+              touchAction: 'none',
             }}
           >
             {isListening ? <PulseRing /> : <MicIcon size={15} color={canControl ? 'white' : 'rgba(255,255,255,0.3)'} />}
           </button>
 
-          {/* Area teks — transcript / response / hint */}
+          {/* Area teks */}
           <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
             {/* Hint awal */}
-            {!transcript && !response && !error && (
+            {!transcript && !response && !error && !isListening && (
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {canControl ? 'Tahan mic untuk bicara…' : '🔒 Login untuk mengontrol perangkat'}
+                {canControl ? micHint + '…' : '🔒 Login untuk mengontrol perangkat'}
               </div>
             )}
 
@@ -397,10 +486,10 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
             )}
           </div>
 
-          {/* Reset button — hanya tampil kalau ada transcript/response */}
+          {/* Reset button */}
           {(transcript || response) && (
             <button
-              onClick={() => { setTranscript(''); setResponse(null); setError('') }}
+              onClick={() => { setTranscript(''); setResponse(null); setError(''); finalTranscriptRef.current = '' }}
               title="Reset"
               style={{
                 flexShrink: 0,
@@ -443,14 +532,18 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
       <button
         // Saat panel belum terbuka → klik buka panel
         onClick={!isOpen ? handleOpen : undefined}
-        // Saat panel terbuka → push-to-talk
-        onMouseDown={isOpen && canControl ? startListening : undefined}
-        onMouseUp={isOpen && canControl && isListening ? stopListening : undefined}
-        onMouseLeave={isOpen && canControl && isListening ? stopListening : undefined}
-        onTouchStart={isOpen && canControl ? (e) => { e.preventDefault(); startListening() } : undefined}
-        onTouchEnd={isOpen && canControl && isListening ? (e) => { e.preventDefault(); stopListening() } : undefined}
-        onTouchCancel={isOpen && canControl && isListening ? stopListening : undefined}
-        title={!isOpen ? 'Buka Voice Control' : isListening ? 'Lepas untuk kirim' : 'Tahan untuk bicara'}
+        // Saat panel terbuka → mic push-to-talk (desktop) / toggle (mobile)
+        {...(isOpen && canControl ? getMicProps(true) : {})}
+        title={!isOpen ? 'Buka Voice Control' : micHint}
+        onMouseEnter={() => { if (!isListening) setIsHovered(true) }}
+        onMouseLeave={(e) => {
+          setIsHovered(false)
+          // Hanya stop jika mouse button masih ditekan
+          if (isMouseDownRef.current && isListening) {
+            isMouseDownRef.current = false
+            stopListening()
+          }
+        }}
         style={{
           flexShrink: 0,
           width: FAB_SIZE, height: FAB_SIZE,
@@ -468,12 +561,12 @@ export function VoiceControl({ onOpenChange, onCloseSidebars }) {
               : '0 4px 20px rgba(29,158,117,0.5), 0 0 0 1px rgba(255,255,255,0.1)',
           cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.2s',
+          transition: 'transform 0.15s ease, background 0.2s, box-shadow 0.2s',
+          transform: isHovered && !isListening ? 'scale(1.1)' : 'scale(1)',
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          touchAction: 'none',
         }}
-        onMouseEnter={e => { if (!isListening) e.currentTarget.style.transform = 'scale(1.1)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
       >
         {isListening ? <PulseRing size={18} /> : <MicIcon size={22} color="white" />}
       </button>
