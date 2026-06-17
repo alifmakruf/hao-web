@@ -224,7 +224,7 @@ export function HouseModel({ onReady }) {
           const lampBg    = isOn ? 'rgba(180,140,40,0.92)' : 'rgba(60,60,80,0.85)'
           const lampBorder = isOn ? '#ffe8a0' : 'rgba(255,255,255,0.2)'
           return (
-            <Html key={deviceKey} position={pos} center style={{ pointerEvents: 'none' }}>
+            <Html key={deviceKey} position={pos} center zIndexRange={[0, 100]} style={{ pointerEvents: 'none' }}>
               {hideNotif ? (
                 <div
                   title={`${label}: ${isOn ? 'ON' : 'OFF'}`}
@@ -273,7 +273,7 @@ export function HouseModel({ onReady }) {
           const fanBg    = isOn ? 'rgba(30,120,180,0.92)' : 'rgba(60,60,80,0.85)'
           const fanBorder = isOn ? fanColor : 'rgba(255,255,255,0.2)'
           return (
-            <Html key={deviceKey} position={pos} center style={{ pointerEvents: 'none' }}>
+            <Html key={deviceKey} position={pos} center zIndexRange={[0, 100]} style={{ pointerEvents: 'none' }}>
               {hideNotif ? (
                 <div
                   title={`${label}: ${isOn ? 'ON' : 'OFF'}`}
@@ -315,7 +315,7 @@ export function HouseModel({ onReady }) {
         const suhu = sensorRuangan?.[key]?.suhu ?? sensor.suhu
         const { color, bg, Icon } = getTempStyle(suhu)
         return (
-          <Html key={key} position={pos} center style={{ pointerEvents: 'none' }}>
+          <Html key={key} position={pos} center zIndexRange={[0, 100]} style={{ pointerEvents: 'none' }}>
             <DeviceIndicator
               label={label}
               isHidden={hideNotif}
@@ -330,7 +330,7 @@ export function HouseModel({ onReady }) {
       })}
 
       {/* ── Label gas — posisi dari mesh Gas di Blender ── */}
-      <Html position={GAS_POS} center style={{ pointerEvents: 'none' }}>
+      <Html position={GAS_POS} center zIndexRange={[0, 100]} style={{ pointerEvents: 'none' }}>
         <DeviceIndicator
           label="Gas"
           isHidden={hideNotif}
@@ -348,6 +348,7 @@ export function HouseModel({ onReady }) {
           key={user.uid}
           position={user.pos ?? [0, 0.05, 2.0]}
           center
+          zIndexRange={[0, 100]}
           style={{ pointerEvents: 'none' }}
         >
           <div style={{

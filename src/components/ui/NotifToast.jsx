@@ -37,14 +37,15 @@ export function NotifToast() {
 
   return (
     <div style={{
-      position: 'absolute',
+      position: 'fixed',
       top: 16,
       right: 16,
-      zIndex: 1000,
+      zIndex: 9000,
       display: 'flex',
       flexDirection: 'column',
       gap: 8,
       maxWidth: 280,
+      pointerEvents: 'none',
     }}>
       {toasts.map((toast) => {
         const { Icon } = toast
@@ -64,6 +65,7 @@ export function NotifToast() {
               animation: 'slideIn 0.3s ease',
               fontFamily: 'sans-serif',
               alignItems: 'flex-start',
+              pointerEvents: 'auto',
             }}
           >
             <Icon size={20} color="white" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />

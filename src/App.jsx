@@ -40,7 +40,7 @@ import { usePresence } from './hooks/usePresence'
 import { WeatherWidget } from './components/ui/WeatherWidget'
 import { useActivityLog } from './hooks/useActivityLog'
 import { ActivityLogModal } from './components/ui/ActivityLogModal'
-import { VoiceControl }    from './components/ui/VoiceControl'
+import { VoiceControl } from './components/ui/VoiceControl'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -306,6 +306,7 @@ export default function App() {
   const [showGuest,    setShowGuest]    = useState(false)
   const [showToken,    setShowToken]    = useState(false)
   const [showActivityLog, setShowActivityLog] = useState(false)
+  const [voicePanelOpen, setVoicePanelOpen]   = useState(false)
   const authRef   = useRef()
   const guestRef  = useRef()
   const tokenRef  = useRef()
@@ -450,11 +451,11 @@ export default function App() {
         camera={{ position: savedCam ? savedCam.pos : DEFAULT_CAM_POS, fov: 50 }}
         style={{
           width: '100%', height: '100%',
-          clipPath: showSidebar
-            ? `inset(0 0 0 ${SIDEBAR_WIDTH}px)`
-            : showRightSidebar
-            ? `inset(0 ${RIGHT_SIDEBAR_WIDTH}px 0 0)`
-            : 'none',
+          clipPath: (() => {
+            if (showSidebar)      return `inset(0 0 0 ${SIDEBAR_WIDTH}px)`
+            if (showRightSidebar) return `inset(0 ${RIGHT_SIDEBAR_WIDTH}px 0 0)`
+            return 'none'
+          })(),
           transition: 'clip-path 0.32s cubic-bezier(0.4,0,0.2,1)',
         }}
         onCreated={() => setSceneReady(true)}
@@ -977,7 +978,10 @@ export default function App() {
         <NotifToast />
 
         {/* ── Voice Control ── */}
-        <VoiceControl />
+        <VoiceControl
+          onOpenChange={setVoicePanelOpen}
+          onCloseSidebars={() => { setSidebarOpen(false); setRightSidebarOpen(false) }}
+        />
       </>
     )}
       <style>{`
