@@ -45,6 +45,24 @@ import { useActivityLog } from './hooks/useActivityLog'
 import { ActivityLogModal } from './components/ui/ActivityLogModal'
 import { VoiceControl } from './components/ui/VoiceControl'
 import { SidebarParticles } from './components/ui/SidebarParticles'
+import { useDevicePerf }    from './hooks/useDevicePerf'
+
+// Module-level perf constants — dihitung sekali, aman dipakai di sub-komponen
+// (hook di-cache di module level oleh useDevicePerf, tidak re-compute)
+const _perf = (() => {
+  // Jalankan deteksi langsung — sama persis dengan logika di useDevicePerf
+  // tapi di module scope agar IconButton, WeatherPanel, dll bisa akses tanpa prop drilling
+  const isTouchPrimary =
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(hover: none)').matches)
+  const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4
+  const mem   = (typeof navigator !== 'undefined' && navigator.deviceMemory)        || 8
+  const isLow = (isTouchPrimary && cores <= 4 && mem <= 2) || (isTouchPrimary && cores <= 2)
+  const isMid = isTouchPrimary || (cores <= 4 && mem <= 4)
+  const tier  = isLow ? 'low' : isMid ? 'medium' : 'high'
+  return { useBlur: tier !== 'low' }
+})()
+const { useBlur } = _perf
 
 // ─────────────────────────────────────────────────────────────────────────────
 const WEATHER_OPTIONS = [
@@ -64,6 +82,7 @@ const RIGHT_SIDEBAR_WIDTH = 260
 function SceneSetup({ weather }) {
   const { ambient, sunColor, isMalam } = useSkyTheme()
   const { liteMode } = useHAOStore()
+  const { tier, starCount, rainCount, useShadow } = useDevicePerf()
 
   const weatherConfig = {
     auto:   { amb: Math.max(ambient, 0.35), sun: sunColor,  night: isMalam },
@@ -74,6 +93,9 @@ function SceneSetup({ weather }) {
   }
   const cfg = weatherConfig[weather] || weatherConfig.auto
 
+  // Shadow map size — high:1024, medium:512, low:256
+  const shadowMapSize = tier === 'high' ? 1024 : tier === 'medium' ? 512 : 256
+
   return (
     <>
       <SkyBackground weatherOverride={weather} />
@@ -82,15 +104,20 @@ function SceneSetup({ weather }) {
         position={[10, 15, 5]}
         intensity={Math.max(cfg.amb, 0.4)}
         color={cfg.sun}
-        castShadow={!liteMode}
-        shadow-mapSize-width={liteMode ? 256 : 1024}
-        shadow-mapSize-height={liteMode ? 256 : 1024}
+        castShadow={!liteMode && useShadow}
+        shadow-mapSize-width={liteMode ? 256 : shadowMapSize}
+        shadow-mapSize-height={liteMode ? 256 : shadowMapSize}
       />
       <directionalLight position={[-5, 2, -5]} intensity={0.3} color="#ffffff" />
-      {/* Lite mode: matikan Stars, Rain, ShootingStars */}
-      {!liteMode && cfg.night && <Stars radius={80} depth={40} count={3000} factor={3} fade />}
-      {!liteMode && <Rain active={weather === 'rainy'} count={2500} />}
-      {!liteMode && <ShootingStars active={cfg.night} />}
+      {!liteMode && cfg.night && (
+        <Stars radius={80} depth={40} count={starCount} factor={3} fade />
+      )}
+      {!liteMode && (
+        <Rain active={weather === 'rainy'} count={rainCount} />
+      )}
+      {!liteMode && (
+        <ShootingStars active={cfg.night} count={tier === 'high' ? 20 : tier === 'medium' ? 12 : 6} quality={tier} />
+      )}
     </>
   )
 }
@@ -161,7 +188,7 @@ function IconButton({ onClick, title, children, active }) {
           background: active
             ? 'rgba(99,184,255,0.2)'
             : hovered ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.45)',
-          backdropFilter: 'blur(8px)',
+          backdropFilter: useBlur ? 'blur(8px)' : 'none',
           cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all 0.2s',
@@ -192,7 +219,7 @@ function WeatherPanel({ weather, onChange, onClose }) {
     <div style={{
       position: 'absolute', top: 46, right: 0,
       background: 'rgba(10,14,26,0.95)',
-      backdropFilter: 'blur(16px)',
+      backdropFilter: useBlur ? 'blur(16px)' : 'none',
       border: '1px solid rgba(255,255,255,0.15)',
       borderRadius: 14, padding: '10px 8px', minWidth: 170,
       zIndex: 1500, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
@@ -250,7 +277,7 @@ function ConnectionStatus() {
       gap: 8,
       alignItems: 'center',
       background: 'rgba(0,0,0,0.5)',
-      backdropFilter: 'blur(8px)',
+      backdropFilter: useBlur ? 'blur(8px)' : 'none',
       padding: '5px 11px',
       borderRadius: 20,
       border: '1px solid rgba(255,255,255,0.1)',
@@ -298,6 +325,7 @@ function ConnectionStatus() {
 export default function App() {
   const { firebaseConnected, liteMode, setLiteMode, hideNotif, setHideNotif, authRole } = useHAOStore()
   const { login, logout, loginGuest, logoutGuest, createToken } = useAuth()
+  const { dpr } = useDevicePerf()
   const [sceneReady, setSceneReady] = useState(false)
   const [loadingDone,  setLoadingDone]  = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -455,6 +483,8 @@ export default function App() {
       <Canvas
         shadows={!liteMode}
         frameloop={liteMode ? 'demand' : 'always'}
+        dpr={dpr}
+        performance={{ min: 0.5 }}
         camera={{ position: savedCam ? savedCam.pos : DEFAULT_CAM_POS, fov: 50 }}
         style={{
           width: '100%', height: '100%',
@@ -482,8 +512,6 @@ export default function App() {
           <CameraController isAnchored={isAnchored} orbitRef={orbitRef} />
         </Suspense>
       </Canvas>
-      
-    {loadingDone && (
       <>
 
       {/* ── Sidebar kiri ── */}
@@ -502,7 +530,7 @@ export default function App() {
             width: SIDEBAR_WIDTH,
             height: '100%',
             background: 'linear-gradient(160deg, rgba(8,12,24,0.92) 0%, rgba(12,18,36,0.88) 100%)',
-            backdropFilter: 'blur(16px)',
+            backdropFilter: useBlur ? 'blur(16px)' : 'none',
             borderRight: '1px solid rgba(255,255,255,0.07)',
             display: 'flex', flexDirection: 'column',
             overflowY: 'auto',
@@ -590,7 +618,7 @@ export default function App() {
                 <div style={{
                   position: 'absolute', inset: 0, zIndex: 10,
                   background: 'rgba(0,0,0,0.45)',
-                  backdropFilter: 'blur(2px)',
+                  backdropFilter: useBlur ? 'blur(2px)' : 'none',
                   borderRadius: 0,
                   display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -644,7 +672,7 @@ export default function App() {
             zIndex: 200,
             width: 20, height: 56,
             background: 'rgba(20,28,50,0.92)',
-            backdropFilter: 'blur(10px)',
+            backdropFilter: useBlur ? 'blur(10px)' : 'none',
             border: '1px solid rgba(255,255,255,0.12)',
             borderLeft: showSidebar ? 'none' : '1px solid rgba(255,255,255,0.12)',
             borderRadius: '0 8px 8px 0',
@@ -721,7 +749,7 @@ export default function App() {
             width: RIGHT_SIDEBAR_WIDTH,
             height: '100%',
             background: 'linear-gradient(160deg, rgba(8,12,24,0.92) 0%, rgba(12,18,36,0.88) 100%)',
-            backdropFilter: 'blur(16px)',
+            backdropFilter: useBlur ? 'blur(16px)' : 'none',
             borderLeft: '1px solid rgba(255,255,255,0.07)',
             display: 'flex', flexDirection: 'column',
             overflowY: 'auto', overflowX: 'hidden',
@@ -967,7 +995,7 @@ export default function App() {
               zIndex: 200,
               width: 20, height: 56,
               background: 'rgba(20,28,50,0.92)',
-              backdropFilter: 'blur(10px)',
+              backdropFilter: useBlur ? 'blur(10px)' : 'none',
               border: '1px solid rgba(255,255,255,0.12)',
               borderRight: showRightSidebar ? 'none' : '1px solid rgba(255,255,255,0.12)',
               borderRadius: '8px 0 0 8px',

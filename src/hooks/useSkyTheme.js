@@ -36,6 +36,8 @@ export function useSkyTheme() {
       sunColor:  phase.sun,
       isMalam:   phase.ambient < 0.2,
       isSiang:   phase.ambient >= 0.8,
+      isSore:    phase.from >= 15 && phase.to <= 18,
+      isSubuh:   phase.from >= 5  && phase.to <= 7,
     }
   }, [jam, sensor.ldr])
 }

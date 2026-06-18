@@ -353,7 +353,7 @@ export function LoadingScreen({ sceneReady, onHidden }) {
       `}</style>
 
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
+        position: 'fixed', inset: 0, zIndex: 999999,
         background: 'linear-gradient(160deg, #060a14 0%, #080c18 40%, #0a1020 70%, #060a14 100%)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',

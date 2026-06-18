@@ -1,35 +1,31 @@
 /**
- * SidebarParticles.jsx
- * Efek partikel ringan untuk sidebar — menggantikan efek sword-slash shine.
- * Titik-titik kecil melayang ke atas secara acak, mirip dengan LoadingScreen
- * tapi lebih pelan dan subtle agar tidak mengganggu UI.
+ * SidebarParticles.jsx — optimized v2
+ * Perubahan:
+ *  - count dikontrol dari luar (useDevicePerf)
+ *  - boxShadow dihapus di medium/low — ini trigger GPU paint tiap animasi frame
+ *  - willChange hanya transform (bukan transform+opacity — dua property = 2 layer)
  */
 
 import { useMemo } from 'react'
+import { useDevicePerf } from '../../hooks/useDevicePerf'
 
-/**
- * @param {object} props
- * @param {'left'|'right'} props.side - sisi sidebar, menentukan warna aksen edge
- * @param {number} [props.count=14] - jumlah partikel (ringan, jangan > 20)
- */
-export function SidebarParticles({ side = 'left', count = 14 }) {
-  // Generate partikel sekali, tidak re-render tiap frame
+export function SidebarParticles({ side = 'left' }) {
+  const { particleCount, tier } = useDevicePerf()
+
   const particles = useMemo(() =>
-    Array.from({ length: count }, (_, i) => ({
+    Array.from({ length: particleCount }, (_, i) => ({
       id: i,
-      x: 5 + Math.random() * 90,          // % dari lebar sidebar
-      size: 1.5 + Math.random() * 2.5,    // px
-      delay: Math.random() * 8,           // s — spread supaya tidak bareng
-      duration: 6 + Math.random() * 6,   // s — lebih pelan dari loading screen
-      opacity: 0.12 + Math.random() * 0.22,
-      // Warna sedikit berbeda kiri/kanan untuk variasi
+      x:        5 + Math.random() * 90,
+      size:     1.5 + Math.random() * 2.5,
+      delay:    Math.random() * 8,
+      duration: 6 + Math.random() * 6,
+      opacity:  0.12 + Math.random() * 0.22,
       hue: side === 'left'
-        ? (Math.random() > 0.5 ? '29,158,117' : '99,184,255') // teal / blue
-        : (Math.random() > 0.5 ? '99,184,255' : '180,130,255'), // blue / purple
+        ? (Math.random() > 0.5 ? '29,158,117' : '99,184,255')
+        : (Math.random() > 0.5 ? '99,184,255' : '180,130,255'),
     })),
-  [count, side])
+  [particleCount, side])
 
-  // Edge accent — garis tipis di tepi sidebar, pulsating pelan
   const edgeStyle = {
     position: 'absolute',
     top: '10%',
@@ -45,14 +41,7 @@ export function SidebarParticles({ side = 'left', count = 14 }) {
   }
 
   return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
-      pointerEvents: 'none',
-      overflow: 'hidden',
-      zIndex: 200,
-    }}>
-      {/* Partikel melayang */}
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 200 }}>
       {particles.map(p => (
         <div
           key={p.id}
@@ -64,14 +53,14 @@ export function SidebarParticles({ side = 'left', count = 14 }) {
             height: p.size,
             borderRadius: '50%',
             background: `rgba(${p.hue},${p.opacity})`,
-            boxShadow: `0 0 ${p.size * 2}px rgba(${p.hue},${p.opacity * 0.8})`,
+            // boxShadow hanya high tier — di medium/low ini trigger repaint tiap frame animasi
+            ...(tier === 'high' ? { boxShadow: `0 0 ${p.size * 2}px rgba(${p.hue},${p.opacity * 0.8})` } : {}),
             animation: `hao-sidebar-particle-rise ${p.duration}s ${p.delay}s ease-out infinite`,
-            willChange: 'transform, opacity',
+            // Hanya transform — satu composite layer, tidak dobel
+            willChange: 'transform',
           }}
         />
       ))}
-
-      {/* Edge accent line */}
       <div style={edgeStyle} />
     </div>
   )
